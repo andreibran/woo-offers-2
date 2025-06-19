@@ -1,0 +1,198 @@
+# PRD: Woo Offers - WordPress Native Architecture Refactoring
+
+## 1. Product Overview
+
+### 1.1 Document Title and Version
+* PRD: Woo Offers - WordPress Native Architecture Refactoring  
+* Version: 2.0 (Refactoring Release)
+
+### 1.2 Product Summary
+This PRD outlines the refactoring of Woo Offers from a React-based administrative interface to a WordPress-native implementation using standard WordPress admin patterns, WP_List_Table, Settings API, and traditional PHP-based admin pages. 
+
+The refactoring maintains all core functionality while significantly reducing complexity, improving maintainability, and following WordPress coding standards. The new architecture eliminates build dependencies (webpack, npm, babel), reduces debugging complexity, and provides immediate functionality without compilation steps.
+
+The refactored plugin will deliver the same powerful upselling capabilities with a simplified, more accessible codebase that follows WordPress best practices and integrates seamlessly with the WordPress admin experience.
+
+## 2. Goals
+
+### 2.1 Technical Goals
+* Eliminate React build dependencies and webpack complexity
+* Reduce codebase complexity by 60-70% 
+* Improve debugging experience with clear PHP error messages
+* Follow WordPress coding standards and admin UI patterns
+* Achieve zero JavaScript build requirements
+* Maintain feature parity with current React implementation
+
+### 2.2 Developer Experience Goals  
+* Enable rapid development without build steps
+* Simplify onboarding for WordPress developers
+* Reduce learning curve for maintenance and extensions
+* Provide clear, readable PHP codebase
+* Eliminate node_modules dependencies and vulnerabilities
+
+### 2.3 User Experience Goals
+* Maintain familiar WordPress admin experience
+* Ensure consistent performance across all admin pages
+* Provide immediate page loads without "Loading..." states
+* Deliver responsive design using WordPress admin CSS
+
+## 3. Architecture Migration Strategy
+
+### 3.1 Current State Analysis
+* React-based admin interface with JSX components
+* Webpack build system with multiple dependencies
+* Complex JavaScript state management
+* Custom REST API endpoints for React communication
+* Build artifacts required for functionality
+
+### 3.2 Target State Architecture
+* WordPress-native admin pages using standard PHP templates
+* WP_List_Table for offers management
+* WordPress Settings API for configuration
+* Standard WordPress admin forms and interfaces
+* Direct database operations using WordPress functions
+
+### 3.3 Migration Approach
+* Phase-by-phase conversion of React components to PHP templates
+* Preserve existing database schema and data structures
+* Maintain API endpoints for frontend functionality
+* Keep offer rendering logic intact for customer-facing features
+* Implement progressive enhancement for JavaScript interactions
+
+## 4. Refactoring Requirements
+
+### 4.1 Admin Dashboard (Priority: High)
+* Convert React dashboard to WordPress admin page with stats widgets
+* Use WordPress admin CSS and UI components
+* Display offer statistics using native WordPress admin cards
+* Implement quick actions using standard WordPress buttons
+* Add contextual help tabs and admin notices
+
+### 4.2 Offers Management (Priority: High)  
+* Implement WP_List_Table for offers overview and management
+* Add bulk actions for offer status changes and deletion
+* Create standard WordPress edit forms for offer configuration
+* Use WordPress media library integration for offer images
+* Implement WordPress-style pagination and filtering
+
+### 4.3 Offer Creation Interface (Priority: High)
+* Convert React offer builder to WordPress admin form pages
+* Use metabox layout for different offer configuration sections
+* Implement WordPress nonce security for form submissions
+* Add offer type selection using WordPress radio buttons/select
+* Create preview functionality using WordPress admin AJAX
+
+### 4.4 Settings Pages (Priority: Medium)
+* Expand existing WordPress Settings API implementation
+* Add tabbed interface using WordPress admin JavaScript
+* Implement color picker using WordPress color picker component
+* Use WordPress help tabs for setting explanations
+* Add settings import/export using WordPress admin tools
+
+### 4.5 Analytics Interface (Priority: Medium)
+* Create analytics dashboard using WordPress admin widgets
+* Implement basic charts using Chart.js with WordPress admin styling
+* Use WordPress date picker for analytics date ranges
+* Add analytics export using WordPress admin CSV generation
+* Display performance metrics in WordPress admin table format
+
+## 5. Technical Implementation Details
+
+### 5.1 File Structure Refactoring
+* Remove assets/js/admin React components
+* Remove webpack.config.js and build system
+* Remove package.json and node dependencies
+* Expand src/Admin/ PHP classes for all admin functionality
+* Create templates/ directory for admin page templates
+
+### 5.2 Database Schema (No Changes Required)
+* Maintain existing offers table structure
+* Keep analytics and statistics tables intact
+* Preserve offer meta and configuration storage
+* Ensure data migration is not required
+
+### 5.3 Frontend Functionality (Minimal Changes)
+* Keep existing frontend offer display logic
+* Maintain JavaScript for offer interactions
+* Preserve CSS styling for customer-facing offers
+* Retain AJAX functionality for cart updates
+
+### 5.4 API Architecture
+* Simplify REST API to support only frontend requirements
+* Remove admin-specific API endpoints
+* Keep customer-facing offer retrieval endpoints
+* Maintain analytics data collection endpoints
+
+## 6. Implementation Phases
+
+### 6.1 Phase 1: Core Admin Structure (Week 1)
+* Refactor Admin.php to use WordPress admin page callbacks
+* Create basic dashboard with WordPress admin widgets
+* Implement simple offers list using basic HTML table
+* Add basic offer creation form using WordPress form patterns
+
+### 6.2 Phase 2: Enhanced Management Interface (Week 1-2)  
+* Implement WP_List_Table for professional offers management
+* Add bulk actions and advanced filtering
+* Create comprehensive offer edit forms with metaboxes
+* Implement WordPress AJAX for dynamic interactions
+
+### 6.3 Phase 3: Analytics and Advanced Features (Week 2)
+* Build analytics dashboard using WordPress widgets and Chart.js
+* Add settings enhancement with tabbed interface
+* Implement offer preview functionality
+* Add import/export capabilities using WordPress tools
+
+### 6.4 Phase 4: Testing and Polish (Week 2-3)
+* Comprehensive testing across different WordPress versions
+* Theme compatibility testing
+* Performance optimization and caching integration
+* Documentation updates and code cleanup
+
+## 7. User Stories for Refactoring
+
+### 7.1 Developer Experience Stories
+
+**US-R001: Simplified Development Setup**
+As a developer, I want to start working on the plugin immediately without build steps so that I can focus on features rather than tooling.
+- Acceptance criteria: No npm install, webpack build, or JavaScript compilation required
+
+**US-R002: Clear Error Debugging**  
+As a developer, I want to see clear PHP error messages when something goes wrong so that I can quickly identify and fix issues.
+- Acceptance criteria: Standard PHP error reporting, no cryptic JavaScript errors
+
+**US-R003: WordPress Standard Patterns**
+As a WordPress developer, I want the admin interface to use standard WordPress patterns so that I can easily understand and modify the code.
+- Acceptance criteria: Uses WP_List_Table, Settings API, and standard WordPress admin UI components
+
+### 7.2 User Experience Stories
+
+**US-R004: Instant Admin Access**
+As a store owner, I want the admin pages to load instantly without "Loading..." messages so that I can efficiently manage my offers.
+- Acceptance criteria: All admin pages load immediately with full content visible
+
+**US-R005: Familiar WordPress Interface**
+As a WordPress user, I want the plugin to feel like part of WordPress so that I don't need to learn a new interface.
+- Acceptance criteria: Uses standard WordPress admin styling, navigation, and interaction patterns
+
+**US-R006: Maintained Functionality**
+As a current user, I want all my existing offers and settings to continue working exactly as before so that the refactoring doesn't disrupt my business.
+- Acceptance criteria: All offers, settings, and analytics data remain functional and accessible
+
+**US-R007: Offers List Management**
+As a store owner, I want to view and manage all my offers in a standard WordPress table so that I can efficiently organize my promotional campaigns.
+- Acceptance criteria: WP_List_Table implementation with sorting, filtering, bulk actions, and pagination
+
+**US-R008: Quick Offer Creation**
+As a store owner, I want to create offers using familiar WordPress forms so that I can quickly set up promotions without learning new interfaces.
+- Acceptance criteria: Standard WordPress admin forms with metaboxes, proper validation, and clear field labels
+
+**US-R009: Dashboard Overview**
+As a store owner, I want a dashboard that shows my offer performance using WordPress admin widgets so that I can quickly assess my promotional effectiveness.
+- Acceptance criteria: WordPress admin dashboard with stat cards, recent activity, and quick action buttons
+
+**US-R010: Analytics Access**
+As a store owner, I want to view offer analytics in a format consistent with WordPress admin so that I can analyze performance data effectively.
+- Acceptance criteria: WordPress admin page with charts, tables, and export functionality using familiar WordPress patterns
+
+This refactoring PRD provides a clear roadmap for converting Woo Offers from React-based complexity to WordPress-native simplicity while maintaining all functionality and improving the developer and user experience.
