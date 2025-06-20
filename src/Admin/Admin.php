@@ -2,6 +2,8 @@
 
 namespace WooOffers\Admin;
 
+use WooOffers\Core\SecurityManager;
+
 /**
  * Admin interface management
  *
@@ -459,6 +461,15 @@ class Admin {
         wp_localize_script( 'woo-offers-admin', 'wooOffersAdmin', [
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
             'nonce' => wp_create_nonce( 'woo_offers_nonce' ),
+            // ✅ SECURITY: Specific nonces for different actions
+            'nonces' => [
+                'searchProducts' => wp_create_nonce( 'woo_offers_search_products' ),
+                'saveOffer' => wp_create_nonce( 'woo_offers_save_offer' ),
+                'previewOffer' => wp_create_nonce( 'woo_offers_preview_offer' ),
+                'deleteOffer' => wp_create_nonce( 'woo_offers_delete_offer' ),
+                'saveSettings' => wp_create_nonce( 'woo_offers_save_settings' ),
+                'analytics' => wp_create_nonce( 'woo_offers_analytics' ),
+            ],
             'pluginUrl' => WOO_OFFERS_PLUGIN_URL,
             'currentPage' => $_GET['page'] ?? '',
             'strings' => [
@@ -470,8 +481,12 @@ class Admin {
                 'selectItems' => __( 'Please select at least one item.', 'woo-offers' ),
                 'filtering' => __( 'Filtering...', 'woo-offers' ),
                 'filter' => __( 'Filter', 'woo-offers' ),
-                'searching' => __( 'Searching...', 'woo-offers' ),
-                'noResults' => __( 'No offers found.', 'woo-offers' ),
+                'searching' => __( 'Searching products...', 'woo-offers' ),
+                'noResults' => __( 'No products found.', 'woo-offers' ),
+                'productAdded' => __( 'Product added successfully!', 'woo-offers' ),
+                'productRemoved' => __( 'Product removed.', 'woo-offers' ),
+                'rateLimitExceeded' => __( 'Too many requests. Please wait.', 'woo-offers' ),
+                'accessDenied' => __( 'Access denied. Please refresh.', 'woo-offers' ),
             ]
         ]);
     }
@@ -788,76 +803,187 @@ class Admin {
     }
 
     /**
-     * AJAX: Search products
+     * AJAX: Search products (SECURE VERSION v3.0)
+     * 
+     * ✅ SECURITY FIXES IMPLEMENTED:
+     * - Nonce verification
+     * - Capability checks  
+     * - Rate limiting
+     * - WooCommerce Data Store usage
+     * - Comprehensive error handling
+     * - Input validation
      */
     public function search_products_ajax() {
-        check_ajax_referer( 'woo_offers_nonce', 'nonce' );
-
-        if ( ! current_user_can( 'manage_woocommerce' ) ) {
-            wp_die( __( 'Permission denied.', 'woo-offers' ) );
+        try {
+            // ✅ SECURITY: Verify nonce
+            SecurityManager::verify_ajax_nonce( 'woo_offers_search_products' );
+            
+            // ✅ SECURITY: Verify user capabilities
+            SecurityManager::verify_capability( 'edit_products' );
+            
+            // ✅ SECURITY: Check rate limits (30 requests per minute)
+            SecurityManager::check_rate_limit( 'product_search', 30, 60 );
+            
+            // ✅ SECURITY: Validate and sanitize query
+            $query = SecurityManager::sanitize_product_search_query( $_POST['query'] ?? '' );
+            
+            $products = [];
+            
+            // ✅ PERFORMANCE: Use WooCommerce Data Store (instead of manual WP_Query)
+            if ( class_exists( 'WC_Data_Store' ) ) {
+                $data_store = \WC_Data_Store::load( 'product' );
+                
+                // Search using WooCommerce native search
+                $product_ids = $data_store->search_products(
+                    $query,           // search term
+                    '',               // status (empty for all published)
+                    true,             // include variations
+                    false,            // return ids only
+                    20,               // limit
+                    [],               // product_ids (empty for all)
+                    []                // exclude_ids
+                );
+                
+                foreach ( $product_ids as $product_id ) {
+                    $product = \wc_get_product( $product_id );
+                    
+                    if ( ! $product || ! $product->is_purchasable() ) {
+                        continue;
+                    }
+                    
+                    $formatted_product = $this->format_product_data( $product );
+                    if ( $formatted_product ) {
+                        $products[] = $formatted_product;
+                    }
+                }
+                
+            } else {
+                // Fallback to manual search if WC Data Store not available
+                $this->fallback_product_search( $query, $products );
+            }
+            
+            // Apply final limit and send response
+            $products = array_slice( $products, 0, 20 );
+            
+            // ✅ SECURITY: Log successful search for monitoring
+            error_log( sprintf( 
+                'WooOffers: Product search successful - Query: %s, Results: %d, User: %d', 
+                $query, 
+                count( $products ), 
+                get_current_user_id() 
+            ) );
+            
+            wp_send_json_success( $products );
+            
+        } catch ( \Exception $e ) {
+            // ✅ SECURITY: Log error with context for monitoring
+            error_log( sprintf( 
+                'WooOffers: Product search failed - Error: %s, Query: %s, User: %d, IP: %s', 
+                $e->getMessage(),
+                $_POST['query'] ?? 'N/A',
+                get_current_user_id(),
+                SecurityManager::get_client_ip()
+            ) );
+            
+            wp_send_json_error( [
+                'message' => __( 'Search failed. Please try again.', 'woo-offers' ),
+                'code' => 'SEARCH_FAILED'
+            ] );
         }
-
-        $query = sanitize_text_field( $_POST['query'] ?? '' );
-        
-        if ( empty( $query ) || strlen( $query ) < 2 ) {
-            wp_send_json_error( __( 'Search query too short.', 'woo-offers' ) );
-        }
-
-        // Search products
+    }
+    
+    /**
+     * Fallback product search method (when WC Data Store not available)
+     * 
+     * @param string $query Search query
+     * @param array $products Products array (passed by reference)
+     */
+    private function fallback_product_search( $query, &$products ) {
+        // Search by name and content
         $args = [
             'post_type' => 'product',
             'post_status' => 'publish',
             'posts_per_page' => 20,
-            'meta_query' => [
-                'relation' => 'OR',
-                [
-                    'key' => '_sku',
-                    'value' => $query,
-                    'compare' => 'LIKE'
-                ]
-            ],
-            's' => $query
+            's' => $query,
+            'orderby' => 'relevance',
+            'order' => 'DESC'
         ];
 
-        // Also search by product ID if query is numeric
-        if ( is_numeric( $query ) ) {
-            $args['meta_query'][] = [
-                'key' => '_product_id',
-                'value' => intval( $query ),
-                'compare' => '='
-            ];
-            
-            // Also include direct ID search
-            $args['post__in'] = [ intval( $query ) ];
-        }
-
-        $products_query = new \WP_Query( $args );
-        $products = [];
-
-        if ( $products_query->have_posts() ) {
-            while ( $products_query->have_posts() ) {
-                $products_query->the_post();
-                $product = wc_get_product( get_the_ID() );
+        $name_query = new \WP_Query( $args );
+        
+        if ( $name_query->have_posts() ) {
+            while ( $name_query->have_posts() ) {
+                $name_query->the_post();
+                $product = \wc_get_product( get_the_ID() );
                 
-                if ( ! $product ) {
+                if ( ! $product || ! $product->is_purchasable() ) {
                     continue;
                 }
 
-                $products[] = [
-                    'id' => $product->get_id(),
-                    'name' => $product->get_name(),
-                    'sku' => $product->get_sku() ?: '',
-                    'price' => $product->get_price_html(),
-                    'type' => wc_get_product_type_name( $product->get_type() ),
-                    'image' => $product->get_image( 'thumbnail' ),
-                    'status' => $product->get_status(),
-                    'stock_status' => $product->get_stock_status()
-                ];
+                // Check for duplicates
+                $already_added = false;
+                foreach ( $products as $existing_product ) {
+                    if ( $existing_product['id'] === $product->get_id() ) {
+                        $already_added = true;
+                        break;
+                    }
+                }
+                
+                if ( ! $already_added ) {
+                    $formatted_product = $this->format_product_data( $product );
+                    if ( $formatted_product ) {
+                        $products[] = $formatted_product;
+                    }
+                }
             }
             wp_reset_postdata();
         }
 
-        wp_send_json_success( $products );
+        // Search by SKU if not enough results
+        if ( count( $products ) < 10 ) {
+            $sku_args = [
+                'post_type' => 'product',
+                'post_status' => 'publish',
+                'posts_per_page' => 20,
+                'meta_query' => [
+                    [
+                        'key' => '_sku',
+                        'value' => $query,
+                        'compare' => 'LIKE'
+                    ]
+                ]
+            ];
+
+            $sku_query = new \WP_Query( $sku_args );
+            
+            if ( $sku_query->have_posts() ) {
+                while ( $sku_query->have_posts() ) {
+                    $sku_query->the_post();
+                    $product = \wc_get_product( get_the_ID() );
+                    
+                    if ( ! $product || ! $product->is_purchasable() ) {
+                        continue;
+                    }
+
+                    // Check for duplicates
+                    $already_added = false;
+                    foreach ( $products as $existing_product ) {
+                        if ( $existing_product['id'] === $product->get_id() ) {
+                            $already_added = true;
+                            break;
+                        }
+                    }
+                    
+                    if ( ! $already_added ) {
+                        $formatted_product = $this->format_product_data( $product );
+                        if ( $formatted_product ) {
+                            $products[] = $formatted_product;
+                        }
+                    }
+                }
+                wp_reset_postdata();
+            }
+        }
     }
 
     /**
@@ -1191,11 +1317,11 @@ class Admin {
                 $name = sanitize_text_field( $product_data['name'] ?? '' );
 
                 // Validate product exists
-                $product = wc_get_product( $product_id );
+                $product = \wc_get_product( $product_id );
                 if ( $product && $quantity > 0 ) {
                     $selected_products[] = [
                         'id' => $product_id,
-                        'name' => $name ?: $product->get_name(),
+                        'name' => $name ?: ( $product->get_name() ?: __( 'Product Name Not Available', 'woo-offers' ) ),
                         'quantity' => $quantity
                     ];
                 }
@@ -2335,5 +2461,35 @@ class Admin {
             'message' => __( 'Getting started guide completed!', 'woo-offers' ),
             'redirect' => admin_url( 'admin.php?page=' . self::MENU_SLUG )
         ] );
+    }
+
+    /**
+     * Format product data safely to prevent null values
+     */
+    private function format_product_data( $product ) {
+        if ( ! $product || ! is_object( $product ) ) {
+            return null;
+        }
+
+        // Get data with null safety
+        $name = $product->get_name();
+        $sku = $product->get_sku();
+        $price_html = $product->get_price_html();
+        $type = $product->get_type();
+        $image = $product->get_image( 'thumbnail' );
+        $status = $product->get_status();
+        $stock_status = $product->get_stock_status();
+
+        // Ensure all values are strings to prevent null errors
+        return [
+            'id' => intval( $product->get_id() ),
+            'name' => ! empty( $name ) ? (string) $name : '',
+            'sku' => ! empty( $sku ) ? (string) $sku : '',
+            'price' => ! empty( $price_html ) ? (string) $price_html : (string) __( 'Price not available', 'woo-offers' ),
+            'type' => ! empty( $type ) ? (string) \wc_get_product_type_name( $type ) : (string) __( 'Unknown', 'woo-offers' ),
+            'image' => ! empty( $image ) ? (string) $image : '',
+            'status' => ! empty( $status ) ? (string) $status : 'publish',
+            'stock_status' => ! empty( $stock_status ) ? (string) $stock_status : 'instock'
+        ];
     }
 }
