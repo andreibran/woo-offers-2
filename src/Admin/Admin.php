@@ -35,8 +35,8 @@ class Admin {
         add_action( 'current_screen', [ $this, 'add_contextual_help' ] );
         add_filter( 'plugin_action_links_' . WOO_OFFERS_PLUGIN_BASENAME, [ $this, 'plugin_action_links' ] );
         
-        // Metabox registration - CRITICAL: Must be on add_meta_boxes hook
-        add_action( 'add_meta_boxes', [ $this, 'register_offer_metaboxes' ] );
+        // Metabox registration - Now handled directly in templates
+        // add_action( 'admin_init', [ $this, 'register_offer_metaboxes' ] );
         
         // AJAX hooks
         add_action( 'wp_ajax_woo_offers_save_settings', [ $this, 'save_settings_ajax' ] );
@@ -1367,7 +1367,7 @@ class Admin {
         $current_screen = get_current_screen();
         $current_page = $_GET['page'] ?? '';
         
-        // Check if we're on the create/edit offer page
+        // Check if we're on the create offer page (used for both create and edit)
         if ( ! $current_screen || $current_page !== 'woo-offers-create' ) {
             return;
         }

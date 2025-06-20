@@ -80,6 +80,18 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                 <!-- Main content area -->
                 <div id="post-body-content">
                     
+                    <!-- Test Metabox -->
+                    <div id="woo_offers_test" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Test Metabox - If you see this, metaboxes are working!', 'woo-offers' ); ?></span>
+                            </h2>
+                        </div>
+                        <div class="inside">
+                            <p><?php _e( 'This is a test metabox to verify that the system is working correctly.', 'woo-offers' ); ?></p>
+                        </div>
+                    </div>
+
                     <!-- Basic Information -->
                     <div id="titlediv">
                         <div id="titlewrap">
@@ -124,11 +136,71 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                         </div>
                     </div>
 
-                    <!-- WordPress Registered Metaboxes -->
-                    <?php do_meta_boxes( 'woo_offers_edit', 'normal', null ); ?>
-                    
-                    <!-- Additional metaboxes in sidebar location -->
-                    <?php do_meta_boxes( 'woo_offers_edit', 'side', null ); ?>
+                    <!-- Test Metabox -->
+                    <div id="woo_offers_test" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Test Metabox - If you see this, metaboxes are working!', 'woo-offers' ); ?></span>
+                            </h2>
+                        </div>
+                        <div class="inside">
+                            <p><?php _e( 'This is a test metabox to verify that the system is working correctly.', 'woo-offers' ); ?></p>
+                        </div>
+                    </div>
+
+                    <!-- General Settings Metabox -->
+                    <div id="woo_offers_general" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'General Settings', 'woo-offers' ); ?></span>
+                            </h2>
+                            <div class="handle-actions hide-if-no-js">
+                                <button type="button" class="handlediv" aria-expanded="true">
+                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: General Settings', 'woo-offers' ); ?></span>
+                                    <span class="toggle-indicator" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/general.php'; ?>
+                        </div>
+                    </div>
+
+                    <!-- Products Metabox -->
+                    <div id="woo_offers_products" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Products', 'woo-offers' ); ?></span>
+                            </h2>
+                            <div class="handle-actions hide-if-no-js">
+                                <button type="button" class="handlediv" aria-expanded="true">
+                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Products', 'woo-offers' ); ?></span>
+                                    <span class="toggle-indicator" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/products.php'; ?>
+                        </div>
+                    </div>
+
+                    <!-- Media & Preview Metabox -->
+                    <div id="woo_offers_media" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Media & Preview', 'woo-offers' ); ?></span>
+                            </h2>
+                            <div class="handle-actions hide-if-no-js">
+                                <button type="button" class="handlediv" aria-expanded="true">
+                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Media & Preview', 'woo-offers' ); ?></span>
+                                    <span class="toggle-indicator" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/media.php'; ?>
+                        </div>
+                    </div>
 
                     <!-- Schedule Metabox -->
                     <div id="offer-schedule" class="postbox">
@@ -277,6 +349,24 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                                 </div>
 
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Appearance Metabox -->
+                    <div id="woo_offers_appearance" class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Appearance', 'woo-offers' ); ?></span>
+                            </h2>
+                            <div class="handle-actions hide-if-no-js">
+                                <button type="button" class="handlediv" aria-expanded="true">
+                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Appearance', 'woo-offers' ); ?></span>
+                                    <span class="toggle-indicator" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/appearance.php'; ?>
                         </div>
                     </div>
 
