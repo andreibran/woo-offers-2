@@ -1,9 +1,7 @@
 <?php
 /**
- * Appearance Settings Metabox Template
- *
- * @package WooOffers
- * @since 2.0.0
+ * Appearance Metabox Template
+ * Modern UI for customizing offer appearance
  */
 
 // Prevent direct access
@@ -11,453 +9,649 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Get offer data passed from the metabox callback
-$offer_data = $offer_data ?? [];
-$appearance = $offer_data['appearance'] ?? [];
-
-// Default appearance settings
-$defaults = [
-    'background_color' => '#ffffff',
-    'text_color' => '#333333',
-    'accent_color' => '#e92d3b',
-    'border_style' => 'solid',
-    'border_width' => '1',
-    'border_color' => '#dddddd',
-    'border_radius' => '4',
-    'layout' => 'card',
-    'position' => 'before_add_to_cart',
-    'animation' => 'none',
-    'shadow' => 'light'
-];
-
-$appearance = wp_parse_args( $appearance, $defaults );
+// Get saved appearance data
+$appearance_data = $offer_data['appearance'] ?? array();
 ?>
 
-<table class="form-table">
-    <tbody>
-        <!-- Color Settings -->
-        <tr>
-            <th scope="row">
-                <label><?php _e( 'Color Scheme', 'woo-offers' ); ?></label>
-            </th>
-            <td>
-                <div class="color-scheme-controls">
-                    <div class="color-control">
-                        <label for="background_color"><?php _e( 'Background Color', 'woo-offers' ); ?></label>
-                        <input type="color" 
-                               name="appearance[background_color]" 
-                               id="background_color" 
-                               value="<?php echo esc_attr( $appearance['background_color'] ); ?>" 
-                               class="color-picker" />
-                        <input type="text" 
-                               name="appearance[background_color_text]" 
-                               value="<?php echo esc_attr( $appearance['background_color'] ); ?>" 
-                               class="color-text-input regular-text" 
-                               placeholder="#ffffff" />
-                    </div>
-                    
-                    <div class="color-control">
-                        <label for="text_color"><?php _e( 'Text Color', 'woo-offers' ); ?></label>
-                        <input type="color" 
-                               name="appearance[text_color]" 
-                               id="text_color" 
-                               value="<?php echo esc_attr( $appearance['text_color'] ); ?>" 
-                               class="color-picker" />
-                        <input type="text" 
-                               name="appearance[text_color_text]" 
-                               value="<?php echo esc_attr( $appearance['text_color'] ); ?>" 
-                               class="color-text-input regular-text" 
-                               placeholder="#333333" />
-                    </div>
-                    
-                    <div class="color-control">
-                        <label for="accent_color"><?php _e( 'Accent Color', 'woo-offers' ); ?></label>
-                        <input type="color" 
-                               name="appearance[accent_color]" 
-                               id="accent_color" 
-                               value="<?php echo esc_attr( $appearance['accent_color'] ); ?>" 
-                               class="color-picker" />
-                        <input type="text" 
-                               name="appearance[accent_color_text]" 
-                               value="<?php echo esc_attr( $appearance['accent_color'] ); ?>" 
-                               class="color-text-input regular-text" 
-                               placeholder="#e92d3b" />
-                    </div>
-                </div>
-                <p class="description">
-                    <?php _e( 'Customize the color scheme of your offer. The background color sets the main container color, text color affects all text within the offer, and accent color is used for buttons, links, and highlights. Tip: Use high contrast between text and background for better readability.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
+<div class="woo-offers-appearance-metabox">
+    
+    <!-- Offer Box Style -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Offer Box Style', 'woo-offers' ); ?></h4>
         
-        <!-- Border Settings -->
-        <tr>
-            <th scope="row">
-                <label><?php _e( 'Border & Shape', 'woo-offers' ); ?></label>
-            </th>
-            <td>
-                <div class="border-controls">
-                    <div class="border-control-group">
-                        <label for="border_style"><?php _e( 'Border Style', 'woo-offers' ); ?></label>
-                        <select name="appearance[border_style]" id="border_style" class="regular-text">
-                            <option value="none" <?php selected( $appearance['border_style'], 'none' ); ?>><?php _e( 'None', 'woo-offers' ); ?></option>
-                            <option value="solid" <?php selected( $appearance['border_style'], 'solid' ); ?>><?php _e( 'Solid', 'woo-offers' ); ?></option>
-                            <option value="dashed" <?php selected( $appearance['border_style'], 'dashed' ); ?>><?php _e( 'Dashed', 'woo-offers' ); ?></option>
-                            <option value="dotted" <?php selected( $appearance['border_style'], 'dotted' ); ?>><?php _e( 'Dotted', 'woo-offers' ); ?></option>
-                        </select>
+        <div class="style-options">
+            <div class="style-option-grid">
+                <?php
+                $box_styles = array(
+                    'modern' => array(
+                        'label' => __( 'Modern', 'woo-offers' ),
+                        'description' => __( 'Clean, contemporary design with rounded corners', 'woo-offers' ),
+                        'preview' => '🎨'
+                    ),
+                    'classic' => array(
+                        'label' => __( 'Classic', 'woo-offers' ),
+                        'description' => __( 'Traditional design with sharp edges', 'woo-offers' ),
+                        'preview' => '📋'
+                    ),
+                    'gradient' => array(
+                        'label' => __( 'Gradient', 'woo-offers' ),
+                        'description' => __( 'Eye-catching gradient background', 'woo-offers' ),
+                        'preview' => '🌈'
+                    ),
+                    'minimal' => array(
+                        'label' => __( 'Minimal', 'woo-offers' ),
+                        'description' => __( 'Simple, distraction-free design', 'woo-offers' ),
+                        'preview' => '⚪'
+                    )
+                );
+                
+                foreach ( $box_styles as $style_key => $style ) :
+                    $checked = ( $appearance_data['box_style'] ?? 'modern' ) === $style_key;
+                ?>
+                <label class="style-option <?php echo $checked ? 'selected' : ''; ?>">
+                    <input type="radio" 
+                           name="appearance[box_style]" 
+                           value="<?php echo esc_attr( $style_key ); ?>"
+                           <?php checked( $checked ); ?>>
+                    <div class="style-preview">
+                        <span class="style-emoji"><?php echo $style['preview']; ?></span>
+                        <strong><?php echo esc_html( $style['label'] ); ?></strong>
+                        <small><?php echo esc_html( $style['description'] ); ?></small>
                     </div>
-                    
-                    <div class="border-control-group">
-                        <label for="border_width"><?php _e( 'Border Width (px)', 'woo-offers' ); ?></label>
-                        <input type="number" 
-                               name="appearance[border_width]" 
-                               id="border_width" 
-                               value="<?php echo esc_attr( $appearance['border_width'] ); ?>" 
-                               class="small-text" 
-                               min="0" 
-                               max="10" />
-                    </div>
-                    
-                    <div class="border-control-group">
-                        <label for="border_color"><?php _e( 'Border Color', 'woo-offers' ); ?></label>
-                        <input type="color" 
-                               name="appearance[border_color]" 
-                               id="border_color" 
-                               value="<?php echo esc_attr( $appearance['border_color'] ); ?>" 
-                               class="color-picker" />
-                    </div>
-                    
-                    <div class="border-control-group">
-                        <label for="border_radius"><?php _e( 'Border Radius (px)', 'woo-offers' ); ?></label>
-                        <input type="number" 
-                               name="appearance[border_radius]" 
-                               id="border_radius" 
-                               value="<?php echo esc_attr( $appearance['border_radius'] ); ?>" 
-                               class="small-text" 
-                               min="0" 
-                               max="50" />
-                    </div>
-                </div>
-                <p class="description">
-                    <?php _e( 'Configure the border appearance. Choose "None" for a borderless design, or select a style and customize the width, color, and corner radius. Higher border radius values create more rounded corners.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
-        
-        <!-- Layout Settings -->
-        <tr>
-            <th scope="row">
-                <label for="layout"><?php _e( 'Layout Style', 'woo-offers' ); ?></label>
-            </th>
-            <td>
-                <select name="appearance[layout]" id="layout" class="regular-text">
-                    <option value="card" <?php selected( $appearance['layout'], 'card' ); ?>><?php _e( 'Card Layout', 'woo-offers' ); ?></option>
-                    <option value="banner" <?php selected( $appearance['layout'], 'banner' ); ?>><?php _e( 'Banner Layout', 'woo-offers' ); ?></option>
-                    <option value="inline" <?php selected( $appearance['layout'], 'inline' ); ?>><?php _e( 'Inline Layout', 'woo-offers' ); ?></option>
-                    <option value="modal" <?php selected( $appearance['layout'], 'modal' ); ?>><?php _e( 'Modal Popup', 'woo-offers' ); ?></option>
-                    <option value="slide_in" <?php selected( $appearance['layout'], 'slide_in' ); ?>><?php _e( 'Slide-in Panel', 'woo-offers' ); ?></option>
-                </select>
-                <p class="description">
-                    <?php _e( 'Select the visual presentation style. Card layout creates a contained box design, Banner layout spans full width, Inline layout blends with page content, Modal popup appears as an overlay, and Slide-in panel appears from the side of the screen.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
-        
-        <!-- Position Settings -->
-        <tr>
-            <th scope="row">
-                <label for="position">
-                    <?php _e( 'Display Position', 'woo-offers' ); ?>
-                    <span class="woo-offers-tooltip" data-tooltip="<?php esc_attr_e( 'Choose where to display the offer on product pages. Positions before/after add to cart are most effective for conversion. Product summary positions are good for informational offers. Sidebar and floating positions are less intrusive but may have lower visibility.', 'woo-offers' ); ?>">
-                        <span class="dashicons dashicons-editor-help"></span>
-                    </span>
                 </label>
-            </th>
-            <td>
-                <select name="appearance[position]" id="position" class="regular-text">
-                    <option value="before_add_to_cart" <?php selected( $appearance['position'], 'before_add_to_cart' ); ?>><?php _e( 'Before Add to Cart Button', 'woo-offers' ); ?></option>
-                    <option value="after_add_to_cart" <?php selected( $appearance['position'], 'after_add_to_cart' ); ?>><?php _e( 'After Add to Cart Button', 'woo-offers' ); ?></option>
-                    <option value="before_product_summary" <?php selected( $appearance['position'], 'before_product_summary' ); ?>><?php _e( 'Before Product Summary', 'woo-offers' ); ?></option>
-                    <option value="after_product_summary" <?php selected( $appearance['position'], 'after_product_summary' ); ?>><?php _e( 'After Product Summary', 'woo-offers' ); ?></option>
-                    <option value="sidebar" <?php selected( $appearance['position'], 'sidebar' ); ?>><?php _e( 'Sidebar', 'woo-offers' ); ?></option>
-                    <option value="floating" <?php selected( $appearance['position'], 'floating' ); ?>><?php _e( 'Floating Position', 'woo-offers' ); ?></option>
-                </select>
-                <p class="description">
-                    <?php _e( 'Choose where to display the offer on product pages. Positions before/after add to cart are most effective for conversion. Product summary positions are good for informational offers. Sidebar and floating positions are less intrusive but may have lower visibility.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
-        
-        <!-- Animation Settings -->
-        <tr>
-            <th scope="row">
-                <label for="animation">
-                    <?php _e( 'Animation Effect', 'woo-offers' ); ?>
-                    <span class="woo-offers-tooltip" data-tooltip="<?php esc_attr_e( 'Add motion to your offer appearance. Subtle animations like Fade In work well for most cases. Bounce and Zoom In are more attention-grabbing but use sparingly. Choose None for better performance on mobile devices and faster loading.', 'woo-offers' ); ?>">
-                        <span class="dashicons dashicons-editor-help"></span>
-                    </span>
-                </label>
-            </th>
-            <td>
-                <select name="appearance[animation]" id="animation" class="regular-text">
-                    <option value="none" <?php selected( $appearance['animation'], 'none' ); ?>><?php _e( 'None', 'woo-offers' ); ?></option>
-                    <option value="fade_in" <?php selected( $appearance['animation'], 'fade_in' ); ?>><?php _e( 'Fade In', 'woo-offers' ); ?></option>
-                    <option value="slide_down" <?php selected( $appearance['animation'], 'slide_down' ); ?>><?php _e( 'Slide Down', 'woo-offers' ); ?></option>
-                    <option value="slide_up" <?php selected( $appearance['animation'], 'slide_up' ); ?>><?php _e( 'Slide Up', 'woo-offers' ); ?></option>
-                    <option value="zoom_in" <?php selected( $appearance['animation'], 'zoom_in' ); ?>><?php _e( 'Zoom In', 'woo-offers' ); ?></option>
-                    <option value="bounce" <?php selected( $appearance['animation'], 'bounce' ); ?>><?php _e( 'Bounce', 'woo-offers' ); ?></option>
-                </select>
-                <p class="description">
-                    <?php _e( 'Add motion to your offer appearance. Subtle animations like "Fade In" work well for most cases. "Bounce" and "Zoom In" are more attention-grabbing but use sparingly. Choose "None" for better performance on mobile devices.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
-        
-        <!-- Shadow Settings -->
-        <tr>
-            <th scope="row">
-                <label for="shadow"><?php _e( 'Shadow Effect', 'woo-offers' ); ?></label>
-            </th>
-            <td>
-                <select name="appearance[shadow]" id="shadow" class="regular-text">
-                    <option value="none" <?php selected( $appearance['shadow'], 'none' ); ?>><?php _e( 'None', 'woo-offers' ); ?></option>
-                    <option value="light" <?php selected( $appearance['shadow'], 'light' ); ?>><?php _e( 'Light Shadow', 'woo-offers' ); ?></option>
-                    <option value="medium" <?php selected( $appearance['shadow'], 'medium' ); ?>><?php _e( 'Medium Shadow', 'woo-offers' ); ?></option>
-                    <option value="heavy" <?php selected( $appearance['shadow'], 'heavy' ); ?>><?php _e( 'Heavy Shadow', 'woo-offers' ); ?></option>
-                </select>
-                <p class="description">
-                    <?php _e( 'Shadow effects add visual depth and help the offer stand out from the page content. Light shadows are subtle and professional, medium shadows provide good separation, and heavy shadows create dramatic emphasis. Use shadows sparingly for best visual impact.', 'woo-offers' ); ?>
-                </p>
-            </td>
-        </tr>
-    </tbody>
-</table>
-
-<!-- Preview Section -->
-<div class="appearance-preview">
-    <h4><?php _e( 'Live Preview', 'woo-offers' ); ?></h4>
-    <div class="preview-container">
-        <div class="offer-preview" id="offer-preview">
-            <div class="offer-content">
-                <h5><?php _e( 'Special Offer!', 'woo-offers' ); ?></h5>
-                <p><?php _e( 'This is how your offer will appear to customers.', 'woo-offers' ); ?></p>
-                <button class="offer-button"><?php _e( 'Claim Offer', 'woo-offers' ); ?></button>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
+
+    <!-- Color Scheme -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Color Scheme', 'woo-offers' ); ?></h4>
+        
+        <div class="color-scheme-options">
+            <?php
+            $color_schemes = array(
+                'blue' => array(
+                    'label' => __( 'Blue Ocean', 'woo-offers' ),
+                    'primary' => '#2271b1',
+                    'secondary' => '#135e96',
+                    'accent' => '#f0f6fc'
+                ),
+                'green' => array(
+                    'label' => __( 'Fresh Green', 'woo-offers' ),
+                    'primary' => '#46b450',
+                    'secondary' => '#00a32a',
+                    'accent' => '#f0fff4'
+                ),
+                'purple' => array(
+                    'label' => __( 'Royal Purple', 'woo-offers' ),
+                    'primary' => '#667eea',
+                    'secondary' => '#764ba2',
+                    'accent' => '#f0f4ff'
+                ),
+                'orange' => array(
+                    'label' => __( 'Sunset Orange', 'woo-offers' ),
+                    'primary' => '#ff8c42',
+                    'secondary' => '#ff6b1a',
+                    'accent' => '#fff8f0'
+                ),
+                'red' => array(
+                    'label' => __( 'Bold Red', 'woo-offers' ),
+                    'primary' => '#e53e3e',
+                    'secondary' => '#c53030',
+                    'accent' => '#fff5f5'
+                ),
+                'dark' => array(
+                    'label' => __( 'Dark Mode', 'woo-offers' ),
+                    'primary' => '#2d3748',
+                    'secondary' => '#1a202c',
+                    'accent' => '#edf2f7'
+                )
+            );
+            
+            foreach ( $color_schemes as $scheme_key => $scheme ) :
+                $checked = ( $appearance_data['color_scheme'] ?? 'blue' ) === $scheme_key;
+            ?>
+            <label class="color-scheme-option <?php echo $checked ? 'selected' : ''; ?>">
+                <input type="radio" 
+                       name="appearance[color_scheme]" 
+                       value="<?php echo esc_attr( $scheme_key ); ?>"
+                       <?php checked( $checked ); ?>>
+                <div class="color-preview">
+                    <div class="color-swatches">
+                        <span class="color-swatch primary" style="background-color: <?php echo esc_attr( $scheme['primary'] ); ?>"></span>
+                        <span class="color-swatch secondary" style="background-color: <?php echo esc_attr( $scheme['secondary'] ); ?>"></span>
+                        <span class="color-swatch accent" style="background-color: <?php echo esc_attr( $scheme['accent'] ); ?>"></span>
+                    </div>
+                    <span class="color-label"><?php echo esc_html( $scheme['label'] ); ?></span>
+                </div>
+            </label>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Position Settings -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Display Position', 'woo-offers' ); ?></h4>
+        
+        <div class="position-options">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="appearance_position"><?php _e( 'Position', 'woo-offers' ); ?></label>
+                    </th>
+                    <td>
+                        <select name="appearance[position]" id="appearance_position" class="regular-text">
+                            <option value="before_add_to_cart" <?php selected( $appearance_data['position'] ?? 'before_add_to_cart', 'before_add_to_cart' ); ?>>
+                                <?php _e( 'Before Add to Cart Button', 'woo-offers' ); ?>
+                            </option>
+                            <option value="after_add_to_cart" <?php selected( $appearance_data['position'] ?? '', 'after_add_to_cart' ); ?>>
+                                <?php _e( 'After Add to Cart Button', 'woo-offers' ); ?>
+                            </option>
+                            <option value="product_summary" <?php selected( $appearance_data['position'] ?? '', 'product_summary' ); ?>>
+                                <?php _e( 'In Product Summary', 'woo-offers' ); ?>
+                            </option>
+                            <option value="product_tabs" <?php selected( $appearance_data['position'] ?? '', 'product_tabs' ); ?>>
+                                <?php _e( 'In Product Tabs', 'woo-offers' ); ?>
+                            </option>
+                            <option value="cart" <?php selected( $appearance_data['position'] ?? '', 'cart' ); ?>>
+                                <?php _e( 'Cart Page', 'woo-offers' ); ?>
+                            </option>
+                            <option value="checkout" <?php selected( $appearance_data['position'] ?? '', 'checkout' ); ?>>
+                                <?php _e( 'Checkout Page', 'woo-offers' ); ?>
+                            </option>
+                        </select>
+                        <p class="description">
+                            <?php _e( 'Choose where the offer should be displayed on the frontend.', 'woo-offers' ); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Animation Settings -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Animation & Effects', 'woo-offers' ); ?></h4>
+        
+        <div class="animation-options">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="appearance_animation"><?php _e( 'Entrance Animation', 'woo-offers' ); ?></label>
+                    </th>
+                    <td>
+                        <select name="appearance[animation]" id="appearance_animation" class="regular-text">
+                            <option value="none" <?php selected( $appearance_data['animation'] ?? 'slideIn', 'none' ); ?>>
+                                <?php _e( 'None', 'woo-offers' ); ?>
+                            </option>
+                            <option value="slideIn" <?php selected( $appearance_data['animation'] ?? 'slideIn', 'slideIn' ); ?>>
+                                <?php _e( 'Slide In', 'woo-offers' ); ?>
+                            </option>
+                            <option value="fadeIn" <?php selected( $appearance_data['animation'] ?? '', 'fadeIn' ); ?>>
+                                <?php _e( 'Fade In', 'woo-offers' ); ?>
+                            </option>
+                            <option value="bounceIn" <?php selected( $appearance_data['animation'] ?? '', 'bounceIn' ); ?>>
+                                <?php _e( 'Bounce In', 'woo-offers' ); ?>
+                            </option>
+                            <option value="zoomIn" <?php selected( $appearance_data['animation'] ?? '', 'zoomIn' ); ?>>
+                                <?php _e( 'Zoom In', 'woo-offers' ); ?>
+                            </option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php _e( 'Visual Effects', 'woo-offers' ); ?></th>
+                    <td>
+                        <fieldset>
+                            <label>
+                                <input type="checkbox" 
+                                       name="appearance[show_countdown]" 
+                                       value="1"
+                                       <?php checked( $appearance_data['show_countdown'] ?? false ); ?>>
+                                <?php _e( 'Show countdown timer', 'woo-offers' ); ?>
+                            </label>
+                            <br>
+                            <label>
+                                <input type="checkbox" 
+                                       name="appearance[show_savings]" 
+                                       value="1"
+                                       <?php checked( $appearance_data['show_savings'] ?? true ); ?>>
+                                <?php _e( 'Display savings amount', 'woo-offers' ); ?>
+                            </label>
+                            <br>
+                            <label>
+                                <input type="checkbox" 
+                                       name="appearance[show_badge]" 
+                                       value="1"
+                                       <?php checked( $appearance_data['show_badge'] ?? true ); ?>>
+                                <?php _e( 'Show offer badge/label', 'woo-offers' ); ?>
+                            </label>
+                            <br>
+                            <label>
+                                <input type="checkbox" 
+                                       name="appearance[pulse_effect]" 
+                                       value="1"
+                                       <?php checked( $appearance_data['pulse_effect'] ?? false ); ?>>
+                                <?php _e( 'Add pulsing effect to grab attention', 'woo-offers' ); ?>
+                            </label>
+                        </fieldset>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Custom CSS -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Custom Styling', 'woo-offers' ); ?></h4>
+        
+        <div class="custom-css-section">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="appearance_custom_css"><?php _e( 'Custom CSS', 'woo-offers' ); ?></label>
+                    </th>
+                    <td>
+                        <textarea name="appearance[custom_css]" 
+                                  id="appearance_custom_css" 
+                                  rows="8" 
+                                  cols="50" 
+                                  class="large-text code"
+                                  placeholder="/* Add your custom CSS here */&#10;.woo-offers-box {&#10;    /* Your styles */&#10;}"><?php echo esc_textarea( $appearance_data['custom_css'] ?? '' ); ?></textarea>
+                        <p class="description">
+                            <?php _e( 'Add custom CSS to further customize the appearance. Use the class .woo-offers-box to target the offer container.', 'woo-offers' ); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="appearance-section">
+        <h4><?php _e( 'Live Preview', 'woo-offers' ); ?></h4>
+        
+        <div class="preview-section">
+            <div id="offer-preview-container" class="offer-preview-container">
+                <div class="offer-preview-box" id="offer-preview-box">
+                    <div class="offer-content">
+                        <span class="offer-badge">🎉 <?php _e( 'Special Offer', 'woo-offers' ); ?></span>
+                        <h3 class="offer-title"><?php _e( 'Sample Offer Title', 'woo-offers' ); ?></h3>
+                        <p class="offer-description"><?php _e( 'Get 20% off your purchase today!', 'woo-offers' ); ?></p>
+                        <div class="offer-savings">
+                            <?php _e( 'You save:', 'woo-offers' ); ?> <strong>$15.00</strong>
+                        </div>
+                        <button class="offer-button"><?php _e( 'Claim Offer', 'woo-offers' ); ?></button>
+                    </div>
+                </div>
+            </div>
+            <p class="description">
+                <?php _e( 'This preview updates automatically as you change the appearance settings above.', 'woo-offers' ); ?>
+            </p>
+        </div>
+    </div>
+
 </div>
+
+<style>
+/* Appearance Metabox Styles */
+.woo-offers-appearance-metabox .appearance-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.woo-offers-appearance-metabox .appearance-section:last-child {
+    border-bottom: none;
+}
+
+.woo-offers-appearance-metabox h4 {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Style Options Grid */
+.style-option-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.style-option {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+    display: block;
+    text-align: center;
+}
+
+.style-option:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateY(-2px);
+}
+
+.style-option.selected {
+    border-color: #667eea;
+    background: #f0f4ff;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.style-option input[type="radio"] {
+    display: none;
+}
+
+.style-preview .style-emoji {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.style-preview strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #1d2327;
+}
+
+.style-preview small {
+    color: #646970;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Color Scheme Options */
+.color-scheme-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.color-scheme-option {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+    display: block;
+    text-align: center;
+}
+
+.color-scheme-option:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.color-scheme-option.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.color-scheme-option input[type="radio"] {
+    display: none;
+}
+
+.color-swatches {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+}
+
+.color-label {
+    font-size: 11px;
+    color: #646970;
+    font-weight: 500;
+}
+
+/* Live Preview */
+.offer-preview-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.offer-preview-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    max-width: 300px;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.offer-content .offer-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+.offer-content .offer-title {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.offer-content .offer-description {
+    margin: 0 0 12px 0;
+    color: #646970;
+    font-size: 14px;
+}
+
+.offer-content .offer-savings {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    color: #46b450;
+}
+
+.offer-content .offer-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.offer-content .offer-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .style-option-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .color-scheme-options {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    }
+}
+</style>
 
 <script>
 jQuery(document).ready(function($) {
-    // Live preview functionality
+    // Live preview updates
     function updatePreview() {
-        var $preview = $('#offer-preview');
-        var $content = $preview.find('.offer-content');
-        var $button = $preview.find('.offer-button');
+        const $preview = $('#offer-preview-box');
+        const $container = $('#offer-preview-container');
         
-        // Get current values
-        var backgroundColor = $('input[name="appearance[background_color]"]').val();
-        var textColor = $('input[name="appearance[text_color]"]').val();
-        var accentColor = $('input[name="appearance[accent_color]"]').val();
-        var borderStyle = $('select[name="appearance[border_style]"]').val();
-        var borderWidth = $('input[name="appearance[border_width]"]').val() + 'px';
-        var borderColor = $('input[name="appearance[border_color]"]').val();
-        var borderRadius = $('input[name="appearance[border_radius]"]').val() + 'px';
-        var shadow = $('select[name="appearance[shadow]"]').val();
+        // Get selected values
+        const boxStyle = $('input[name="appearance[box_style]"]:checked').val() || 'modern';
+        const colorScheme = $('input[name="appearance[color_scheme]"]:checked').val() || 'blue';
+        const animation = $('#appearance_animation').val() || 'slideIn';
+        const showCountdown = $('input[name="appearance[show_countdown]"]').is(':checked');
+        const showSavings = $('input[name="appearance[show_savings]"]').is(':checked');
+        const showBadge = $('input[name="appearance[show_badge]"]').is(':checked');
+        const pulseEffect = $('input[name="appearance[pulse_effect]"]').is(':checked');
         
-        // Apply styles to preview
-        var styles = {
-            'background-color': backgroundColor,
-            'color': textColor,
-            'border-style': borderStyle,
-            'border-width': borderWidth,
-            'border-color': borderColor,
-            'border-radius': borderRadius
+        // Color schemes
+        const colorSchemes = {
+            blue: { primary: '#2271b1', secondary: '#135e96', accent: '#f0f6fc' },
+            green: { primary: '#46b450', secondary: '#00a32a', accent: '#f0fff4' },
+            purple: { primary: '#667eea', secondary: '#764ba2', accent: '#f0f4ff' },
+            orange: { primary: '#ff8c42', secondary: '#ff6b1a', accent: '#fff8f0' },
+            red: { primary: '#e53e3e', secondary: '#c53030', accent: '#fff5f5' },
+            dark: { primary: '#2d3748', secondary: '#1a202c', accent: '#edf2f7' }
         };
         
-        // Shadow effects
-        switch(shadow) {
-            case 'light':
-                styles['box-shadow'] = '0 1px 3px rgba(0,0,0,0.1)';
-                break;
-            case 'medium':
-                styles['box-shadow'] = '0 4px 6px rgba(0,0,0,0.1)';
-                break;
-            case 'heavy':
-                styles['box-shadow'] = '0 10px 25px rgba(0,0,0,0.2)';
-                break;
-            default:
-                styles['box-shadow'] = 'none';
+        const colors = colorSchemes[colorScheme];
+        
+        // Apply box style
+        $preview.removeClass('style-modern style-classic style-gradient style-minimal');
+        $preview.addClass('style-' + boxStyle);
+        
+        // Apply colors
+        const $badge = $preview.find('.offer-badge');
+        const $button = $preview.find('.offer-button');
+        
+        $badge.css('background', `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`);
+        $button.css('background', `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`);
+        
+        if (boxStyle === 'gradient') {
+            $preview.css('background', `linear-gradient(135deg, ${colors.accent} 0%, #fff 100%)`);
+        } else {
+            $preview.css('background', '#fff');
         }
         
-        $preview.css(styles);
-        $button.css({
-            'background-color': accentColor,
-            'border-color': accentColor
-        });
+        // Show/hide elements
+        $preview.find('.offer-badge').toggle(showBadge);
+        $preview.find('.offer-savings').toggle(showSavings);
+        
+        // Pulse effect
+        if (pulseEffect) {
+            $preview.addClass('pulse-effect');
+        } else {
+            $preview.removeClass('pulse-effect');
+        }
+        
+        // Animation preview
+        $preview.removeClass('animate-slideIn animate-fadeIn animate-bounceIn animate-zoomIn');
+        if (animation !== 'none') {
+            setTimeout(() => {
+                $preview.addClass('animate-' + animation);
+            }, 100);
+        }
     }
     
-    // Color picker synchronization
-    $('.color-picker').on('change', function() {
-        var $this = $(this);
-        var $textInput = $this.siblings('.color-text-input');
-        $textInput.val($this.val());
-        updatePreview();
-    });
+    // Update preview on any change
+    $('input[name^="appearance"], select[name^="appearance"]').on('change', updatePreview);
     
-    $('.color-text-input').on('change keyup', function() {
-        var $this = $(this);
-        var $colorPicker = $this.siblings('.color-picker');
-        var color = $this.val();
-        
-        // Validate hex color
-        if (/^#[0-9A-F]{6}$/i.test(color)) {
-            $colorPicker.val(color);
-            // Update the corresponding hidden field
-            var hiddenFieldName = $colorPicker.attr('name');
-            $colorPicker.attr('name', hiddenFieldName);
-        }
-        updatePreview();
-    });
-    
-    // Update preview when any appearance setting changes
-    $('input[name^="appearance"], select[name^="appearance"]').on('change keyup', function() {
-        updatePreview();
-    });
-    
-    // Initial preview update
+    // Initial preview
     updatePreview();
     
-    // Border style handling
-    $('select[name="appearance[border_style]"]').on('change', function() {
-        var borderControls = $('.border-control-group').not(':first');
-        if ($(this).val() === 'none') {
-            borderControls.hide();
-        } else {
-            borderControls.show();
-        }
+    // Style option selection
+    $('.style-option').on('click', function() {
+        $('.style-option').removeClass('selected');
+        $(this).addClass('selected');
+        $(this).find('input[type="radio"]').prop('checked', true);
         updatePreview();
-    }).trigger('change');
-
-    // Tooltip functionality
-    initTooltips();
+    });
+    
+    // Color scheme selection
+    $('.color-scheme-option').on('click', function() {
+        $('.color-scheme-option').removeClass('selected');
+        $(this).addClass('selected');
+        $(this).find('input[type="radio"]').prop('checked', true);
+        updatePreview();
+    });
 });
-
-function initTooltips() {
-    // Create tooltip container
-    if (!$('#woo-offers-tooltip').length) {
-        $('body').append('<div id="woo-offers-tooltip" class="woo-offers-tooltip-container"></div>');
-    }
-    
-    var $tooltip = $('#woo-offers-tooltip');
-    
-    // Show tooltip on hover
-    $(document).on('mouseenter', '.woo-offers-tooltip', function(e) {
-        var tooltipText = $(this).data('tooltip');
-        if (tooltipText) {
-            $tooltip.html(tooltipText).show();
-            positionTooltip(e, $tooltip);
-        }
-    });
-    
-    // Hide tooltip on leave
-    $(document).on('mouseleave', '.woo-offers-tooltip', function() {
-        $tooltip.hide();
-    });
-    
-    // Update tooltip position on mouse move
-    $(document).on('mousemove', '.woo-offers-tooltip', function(e) {
-        if ($tooltip.is(':visible')) {
-            positionTooltip(e, $tooltip);
-        }
-    });
-}
-
-function positionTooltip(e, $tooltip) {
-    var mouseX = e.pageX;
-    var mouseY = e.pageY;
-    var tooltipWidth = $tooltip.outerWidth();
-    var tooltipHeight = $tooltip.outerHeight();
-    var windowWidth = $(window).width();
-    var windowHeight = $(window).height();
-    var scrollLeft = $(window).scrollLeft();
-    var scrollTop = $(window).scrollTop();
-    
-    // Default position: to the right and below cursor
-    var left = mouseX + 10;
-    var top = mouseY + 10;
-    
-    // Adjust if tooltip would go off screen
-    if (left + tooltipWidth > windowWidth + scrollLeft) {
-        left = mouseX - tooltipWidth - 10;
-    }
-    
-    if (top + tooltipHeight > windowHeight + scrollTop) {
-        top = mouseY - tooltipHeight - 10;
-    }
-    
-    $tooltip.css({
-        left: left + 'px',
-        top: top + 'px'
-    });
-}
 </script>
 
 <style>
-/* Tooltip Styles */
-.woo-offers-tooltip {
-    display: inline-block;
-    margin-left: 5px;
-    cursor: help;
-    color: #666;
-    vertical-align: top;
+/* Additional animation styles */
+.pulse-effect {
+    animation: pulse 2s infinite;
 }
 
-.woo-offers-tooltip .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
-.woo-offers-tooltip:hover .dashicons {
-    color: #0073aa;
+.animate-slideIn {
+    animation: slideIn 0.5s ease-out;
 }
 
-.woo-offers-tooltip-container {
-    position: absolute;
-    background: #333;
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 1.4;
-    max-width: 250px;
-    z-index: 9999;
-    display: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    word-wrap: break-word;
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
-.woo-offers-tooltip-container:before {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 0;
-    border: 5px solid transparent;
-    border-bottom-color: #333;
-    top: -10px;
-    left: 10px;
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
 }
 
-/* Form enhancements for tooltips */
-.form-table th label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-.form-table th .woo-offers-tooltip {
-    flex-shrink: 0;
+.animate-bounceIn {
+    animation: bounceIn 0.6s ease-out;
+}
+
+@keyframes bounceIn {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { opacity: 1; transform: scale(1.05); }
+    70% { transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-zoomIn {
+    animation: zoomIn 0.5s ease-out;
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Box style variations */
+.style-classic {
+    border-radius: 0 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.style-modern {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+}
+
+.style-minimal {
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    border: 1px solid #e0e0e0 !important;
 }
 </style> 

@@ -136,18 +136,6 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                         </div>
                     </div>
 
-                    <!-- Test Metabox -->
-                    <div id="woo_offers_test" class="postbox">
-                        <div class="postbox-header">
-                            <h2 class="hndle ui-sortable-handle">
-                                <span><?php _e( 'Test Metabox - If you see this, metaboxes are working!', 'woo-offers' ); ?></span>
-                            </h2>
-                        </div>
-                        <div class="inside">
-                            <p><?php _e( 'This is a test metabox to verify that the system is working correctly.', 'woo-offers' ); ?></p>
-                        </div>
-                    </div>
-
                     <!-- General Settings Metabox -->
                     <div id="woo_offers_general" class="postbox">
                         <div class="postbox-header">
