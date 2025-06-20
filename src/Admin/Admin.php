@@ -35,6 +35,9 @@ class Admin {
         add_action( 'current_screen', [ $this, 'add_contextual_help' ] );
         add_filter( 'plugin_action_links_' . WOO_OFFERS_PLUGIN_BASENAME, [ $this, 'plugin_action_links' ] );
         
+        // Metabox registration - CRITICAL: Must be on add_meta_boxes hook
+        add_action( 'add_meta_boxes', [ $this, 'register_offer_metaboxes' ] );
+        
         // AJAX hooks
         add_action( 'wp_ajax_woo_offers_save_settings', [ $this, 'save_settings_ajax' ] );
         add_action( 'wp_ajax_woo_offers_get_offers', [ $this, 'get_offers_ajax' ] );
@@ -309,9 +312,6 @@ class Admin {
         if ( $_POST && isset( $_POST['action'] ) && $_POST['action'] === 'save_offer' ) {
             $this->save_offer();
         }
-        
-        // Register metaboxes for offer editing
-        $this->register_offer_metaboxes();
         
         // Use edit template for both create and edit
         $this->render_admin_page( 'edit-offer' );
@@ -1363,6 +1363,15 @@ class Admin {
      * Register metaboxes for offer edit screen
      */
     public function register_offer_metaboxes() {
+        // Only register metaboxes on the create/edit offer page
+        $current_screen = get_current_screen();
+        $current_page = $_GET['page'] ?? '';
+        
+        // Check if we're on the create/edit offer page
+        if ( ! $current_screen || $current_page !== 'woo-offers-create' ) {
+            return;
+        }
+        
         add_meta_box(
             'woo_offers_general',
             __( 'General Settings', 'woo-offers' ),

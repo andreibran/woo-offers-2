@@ -167,7 +167,7 @@ final class WooOffers {
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/class-offers-list-table.php';
         
         // Frontend classes
-        // require_once WOO_OFFERS_PLUGIN_DIR . 'src/Frontend/Frontend.php'; // COMENTADO - ARQUIVO INEXISTENTE
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Frontend/Display.php';
         
         // API classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/API/RestAPI.php';
@@ -212,7 +212,7 @@ final class WooOffers {
         new WooOffers\Admin\SetupWizard();
         
         // Initialize frontend components
-        // new WooOffers\Frontend\Frontend(); // COMENTADO - CLASSE INEXISTENTE
+        WooOffers\Frontend\Display::init();
         
         // Initialize API components
         new WooOffers\API\RestAPI();

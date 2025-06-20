@@ -400,11 +400,7 @@ class Offers_List_Table extends \WP_List_Table {
         $query_values = array_merge( $where_values, [ $limit, $offset ] );
         $results = $wpdb->get_results( $wpdb->prepare( $sql, $query_values ), ARRAY_A );
 
-        // If no results from database, return sample data for testing
-        if ( empty( $results ) ) {
-            return $this->get_sample_data();
-        }
-
+        // Return real results from database only
         return $results;
     }
 
@@ -455,8 +451,8 @@ class Offers_List_Table extends \WP_List_Table {
             $count = $wpdb->get_var( $wpdb->prepare( $sql, $where_values ) );
         }
 
-        // If no records in database, return sample count for testing
-        return $count ? intval( $count ) : 4;
+        // Return real count from database only
+        return $count ? intval( $count ) : 0;
     }
 
     /**

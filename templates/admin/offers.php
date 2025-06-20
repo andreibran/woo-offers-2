@@ -85,7 +85,54 @@ $stats = $offers_table->get_summary_stats();
         <input type="hidden" name="page" value="<?php echo esc_attr( $_REQUEST['page'] ?? 'woo-offers-offers' ); ?>" />
         
         <?php $offers_table->search_box( __( 'Search Offers', 'woo-offers' ), 'offer' ); ?>
-        <?php $offers_table->display(); ?>
+        
+        <?php if ( $stats['total_offers'] === 0 && empty( $_REQUEST['s'] ) ): ?>
+            <!-- Empty state when no offers exist -->
+            <div class="woo-offers-empty-state">
+                <div class="empty-state-icon">
+                    <span class="dashicons dashicons-tag" style="font-size: 64px; color: #ccd0d4;"></span>
+                </div>
+                <h2><?php _e( 'No offers yet', 'woo-offers' ); ?></h2>
+                <p class="empty-state-description">
+                    <?php _e( 'You haven\'t created any offers yet. Start by creating your first offer to boost your sales with targeted promotions.', 'woo-offers' ); ?>
+                </p>
+                <a href="<?php echo admin_url( 'admin.php?page=woo-offers-create' ); ?>" class="button button-primary button-hero">
+                    <?php _e( 'Create Your First Offer', 'woo-offers' ); ?>
+                </a>
+            </div>
+            
+            <style>
+            .woo-offers-empty-state {
+                text-align: center;
+                padding: 60px 20px;
+                background: #fff;
+                border: 1px solid #c3c4c7;
+                border-radius: 4px;
+                margin-top: 20px;
+            }
+            .woo-offers-empty-state h2 {
+                margin: 20px 0 10px;
+                color: #50575e;
+                font-size: 24px;
+                font-weight: 400;
+            }
+            .empty-state-description {
+                color: #646970;
+                font-size: 16px;
+                margin-bottom: 30px;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .button-hero {
+                padding: 12px 24px;
+                font-size: 16px;
+                height: auto;
+            }
+            </style>
+        <?php else: ?>
+            <?php $offers_table->display(); ?>
+        <?php endif; ?>
         
     </form>
 </div> 

@@ -125,7 +125,10 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                     </div>
 
                     <!-- WordPress Registered Metaboxes -->
-                    <?php do_meta_boxes( 'woo-offers-edit', 'normal', null ); ?>
+                    <?php do_meta_boxes( 'woo_offers_edit', 'normal', null ); ?>
+                    
+                    <!-- Additional metaboxes in sidebar location -->
+                    <?php do_meta_boxes( 'woo_offers_edit', 'side', null ); ?>
 
                     <!-- Schedule Metabox -->
                     <div id="offer-schedule" class="postbox">
@@ -330,7 +333,7 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
 jQuery(document).ready(function($) {
     // Initialize metaboxes
     if (typeof postboxes !== 'undefined') {
-        postboxes.add_postbox_toggles('woo-offers-edit');
+        postboxes.add_postbox_toggles('woo_offers_edit');
     }
     
     // Initialize form validation

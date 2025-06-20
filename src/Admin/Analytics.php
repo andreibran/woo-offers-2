@@ -26,13 +26,33 @@ class Analytics {
         add_action( 'init', [ $this, 'init' ] );
         add_action( 'wp_ajax_woo_offers_get_analytics_data', [ $this, 'get_analytics_data_ajax' ] );
         add_action( 'wp_ajax_woo_offers_export_analytics', [ $this, 'export_analytics_ajax' ] );
+        
+        // Frontend event tracking AJAX handlers
+        add_action( 'wp_ajax_woo_offers_track_event', [ $this, 'track_event_ajax' ] );
+        add_action( 'wp_ajax_nopriv_woo_offers_track_event', [ $this, 'track_event_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_track_events_batch', [ $this, 'track_events_batch_ajax' ] );
+        add_action( 'wp_ajax_nopriv_woo_offers_track_events_batch', [ $this, 'track_events_batch_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_get_applied_offers', [ $this, 'get_applied_offers_ajax' ] );
+        add_action( 'wp_ajax_nopriv_woo_offers_get_applied_offers', [ $this, 'get_applied_offers_ajax' ] );
+        
+        // Database setup
+        register_activation_hook( WOO_OFFERS_PLUGIN_FILE, [ $this, 'create_analytics_table' ] );
     }
 
     /**
      * Initialize analytics functionality
      */
     public function init() {
-        // Analytics initialization
+        // Ensure analytics table exists
+        $this->create_analytics_table();
+        
+        // Clean up old analytics data (older than 1 year)
+        add_action( 'woo_offers_daily_cleanup', [ $this, 'cleanup_old_analytics_data' ] );
+        
+        // Schedule cleanup if not already scheduled
+        if ( ! wp_next_scheduled( 'woo_offers_daily_cleanup' ) ) {
+            wp_schedule_event( time(), 'daily', 'woo_offers_daily_cleanup' );
+        }
     }
 
     /**
@@ -580,5 +600,239 @@ class Analytics {
             $date_range['start'],
             $date_range['end']
         ), ARRAY_A );
+    }
+
+    /**
+     * Create analytics table
+     */
+    public function create_analytics_table() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'woo_offers_analytics';
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE {$table_name} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            event_type varchar(50) NOT NULL,
+            offer_id bigint(20) NOT NULL,
+            product_id bigint(20) DEFAULT NULL,
+            user_id bigint(20) DEFAULT NULL,
+            session_id varchar(100) NOT NULL,
+            url varchar(255) DEFAULT NULL,
+            referrer varchar(255) DEFAULT NULL,
+            user_agent text DEFAULT NULL,
+            screen_resolution varchar(20) DEFAULT NULL,
+            viewport_size varchar(20) DEFAULT NULL,
+            discount_amount decimal(10,2) DEFAULT 0.00,
+            conversion tinyint(1) DEFAULT 0,
+            revenue decimal(10,2) DEFAULT 0.00,
+            event_data longtext DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY offer_id (offer_id),
+            KEY product_id (product_id),
+            KEY user_id (user_id),
+            KEY session_id (session_id),
+            KEY event_type (event_type),
+            KEY created_at (created_at),
+            KEY conversion (conversion)
+        ) {$charset_collate};";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+    }
+
+    /**
+     * Track a single event
+     * 
+     * @param array $event_data Event data
+     * @return bool Success status
+     */
+    public function track_event( $event_data ) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'woo_offers_analytics';
+
+        // Determine if this is a conversion event
+        $conversion_events = [ 'offer_conversion', 'offer_apply_success', 'purchase' ];
+        $is_conversion = in_array( $event_data['event_type'] ?? '', $conversion_events );
+
+        $data = [
+            'event_type' => sanitize_text_field( $event_data['event_type'] ?? '' ),
+            'offer_id' => intval( $event_data['offer_id'] ?? 0 ),
+            'product_id' => intval( $event_data['product_id'] ?? 0 ),
+            'user_id' => intval( $event_data['user_id'] ?? get_current_user_id() ),
+            'session_id' => sanitize_text_field( $event_data['session_id'] ?? '' ),
+            'url' => esc_url_raw( $event_data['url'] ?? '' ),
+            'referrer' => esc_url_raw( $event_data['referrer'] ?? '' ),
+            'user_agent' => sanitize_text_field( $event_data['user_agent'] ?? '' ),
+            'screen_resolution' => sanitize_text_field( $event_data['screen_resolution'] ?? '' ),
+            'viewport_size' => sanitize_text_field( $event_data['viewport_size'] ?? '' ),
+            'discount_amount' => floatval( $event_data['discount_amount'] ?? 0 ),
+            'conversion' => $is_conversion ? 1 : 0,
+            'revenue' => floatval( $event_data['conversion_value'] ?? $event_data['revenue'] ?? 0 ),
+            'event_data' => wp_json_encode( $event_data ),
+            'created_at' => current_time( 'mysql' )
+        ];
+
+        return $wpdb->insert( $table_name, $data ) !== false;
+    }
+
+    /**
+     * AJAX handler for tracking single event
+     */
+    public function track_event_ajax() {
+        // Basic security check
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security check failed', 'woo-offers' ) ] );
+        }
+
+        $event_data_json = stripslashes( $_POST['event_data'] ?? '' );
+        $event_data = json_decode( $event_data_json, true );
+
+        if ( ! $event_data || ! isset( $event_data['event_type'] ) ) {
+            wp_send_json_error( [ 'message' => __( 'Invalid event data', 'woo-offers' ) ] );
+        }
+
+        $success = $this->track_event( $event_data );
+
+        if ( $success ) {
+            wp_send_json_success( [ 'message' => __( 'Event tracked successfully', 'woo-offers' ) ] );
+        } else {
+            wp_send_json_error( [ 'message' => __( 'Failed to track event', 'woo-offers' ) ] );
+        }
+    }
+
+    /**
+     * AJAX handler for tracking batch events
+     */
+    public function track_events_batch_ajax() {
+        // Basic security check
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security check failed', 'woo-offers' ) ] );
+        }
+
+        $events_data_json = stripslashes( $_POST['events_data'] ?? '' );
+        $events_data = json_decode( $events_data_json, true );
+
+        if ( ! $events_data || ! is_array( $events_data ) ) {
+            wp_send_json_error( [ 'message' => __( 'Invalid events data', 'woo-offers' ) ] );
+        }
+
+        $tracked_count = 0;
+        foreach ( $events_data as $event_data ) {
+            if ( isset( $event_data['event_type'] ) && $this->track_event( $event_data ) ) {
+                $tracked_count++;
+            }
+        }
+
+        wp_send_json_success( [ 
+            'message' => sprintf( __( '%d events tracked successfully', 'woo-offers' ), $tracked_count ),
+            'tracked_count' => $tracked_count,
+            'total_events' => count( $events_data )
+        ] );
+    }
+
+    /**
+     * AJAX handler for getting applied offers
+     */
+    public function get_applied_offers_ajax() {
+        // Basic security check
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security check failed', 'woo-offers' ) ] );
+        }
+
+        $product_id = intval( $_POST['product_id'] ?? 0 );
+        
+        // Get current cart
+        if ( ! WC()->cart ) {
+            wp_send_json_success( [ 'applied_offers' => [], 'cart_total' => 0 ] );
+            return;
+        }
+
+        $applied_offers = [];
+        $cart_coupons = WC()->cart->get_applied_coupons();
+        
+        foreach ( $cart_coupons as $coupon_code ) {
+            // Check if this is a WooOffers generated coupon
+            if ( strpos( $coupon_code, 'woo_offers_' ) === 0 ) {
+                // Extract offer ID from coupon code
+                preg_match( '/woo_offers_(\d+)_/', $coupon_code, $matches );
+                if ( isset( $matches[1] ) ) {
+                    $offer_id = intval( $matches[1] );
+                    $coupon = new WC_Coupon( $coupon_code );
+                    
+                    $applied_offers[] = [
+                        'offer_id' => $offer_id,
+                        'coupon_code' => $coupon_code,
+                        'discount_amount' => $coupon->get_amount(),
+                        'offer_type' => $this->get_offer_type_by_id( $offer_id )
+                    ];
+                }
+            }
+        }
+
+        wp_send_json_success( [ 
+            'applied_offers' => $applied_offers,
+            'cart_total' => WC()->cart->get_cart_contents_total()
+        ] );
+    }
+
+    /**
+     * Get offer type by offer ID
+     * 
+     * @param int $offer_id Offer ID
+     * @return string Offer type
+     */
+    private function get_offer_type_by_id( $offer_id ) {
+        global $wpdb;
+        
+        $offers_table = $wpdb->prefix . 'woo_offers';
+        $offer_type = $wpdb->get_var( $wpdb->prepare(
+            "SELECT offer_type FROM {$offers_table} WHERE id = %d",
+            $offer_id
+        ) );
+        
+        return $offer_type ?: 'unknown';
+    }
+
+    /**
+     * Clean up old analytics data (older than 1 year)
+     */
+    public function cleanup_old_analytics_data() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'woo_offers_analytics';
+        $cutoff_date = date( 'Y-m-d H:i:s', strtotime( '-1 year' ) );
+
+        $deleted = $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$table_name} WHERE created_at < %s",
+            $cutoff_date
+        ) );
+
+        if ( $deleted !== false ) {
+            error_log( sprintf( 'WooOffers: Cleaned up %d old analytics records', $deleted ) );
+        }
+    }
+
+    /**
+     * Get analytics insights for dashboard
+     * 
+     * @return array Analytics insights
+     */
+    public function get_analytics_insights() {
+        $date_range = $this->get_current_date_range();
+        $overview_stats = $this->get_overview_stats( $date_range );
+        $top_offers = $this->get_top_offers( 5, $date_range );
+
+        return [
+            'total_views' => $overview_stats['total_views'],
+            'total_conversions' => $overview_stats['total_conversions'],
+            'conversion_rate' => $overview_stats['conversion_rate'],
+            'total_revenue' => $overview_stats['total_revenue'],
+            'top_performing_offer' => ! empty( $top_offers ) ? $top_offers[0] : null,
+            'performance_trend' => $overview_stats['conversions_change'] >= 0 ? 'up' : 'down'
+        ];
     }
 }
