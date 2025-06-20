@@ -143,175 +143,168 @@ class SecurityManager {
     }
 
     /**
-     * Sanitize campaign data with comprehensive validation
-     *
-     * @param array $data Raw campaign data
-     * @return array Sanitized campaign data
-     */
-    public static function sanitize_campaign_data( $data ) {
-        if ( ! is_array( $data ) ) {
-            return [];
-        }
-
-        return [
-            'name' => sanitize_text_field( $data['name'] ?? '' ),
-            'description' => wp_kses_post( $data['description'] ?? '' ),
-            'type' => self::sanitize_campaign_type( $data['type'] ?? '' ),
-            'status' => self::sanitize_status( $data['status'] ?? '' ),
-            'settings' => self::sanitize_json_settings( $data['settings'] ?? [] ),
-            'targeting_rules' => self::sanitize_targeting_rules( $data['targeting_rules'] ?? [] ),
-            'schedule_config' => self::sanitize_schedule_config( $data['schedule_config'] ?? [] ),
-            'design_config' => self::sanitize_design_config( $data['design_config'] ?? [] )
-        ];
-    }
-
-    /**
-     * Sanitize campaign type
-     *
-     * @param string $type Campaign type
-     * @return string Sanitized campaign type
-     */
-    private static function sanitize_campaign_type( $type ) {
-        $allowed_types = [
-            'checkout_upsell',
-            'cart_upsell', 
-            'product_upsell',
-            'exit_intent',
-            'post_purchase'
-        ];
-        
-        return in_array( $type, $allowed_types ) ? $type : 'product_upsell';
-    }
-
-    /**
-     * Sanitize status
-     *
-     * @param string $status Status value
-     * @return string Sanitized status
-     */
-    private static function sanitize_status( $status ) {
-        $allowed_statuses = [ 'draft', 'active', 'paused', 'expired' ];
-        return in_array( $status, $allowed_statuses ) ? $status : 'draft';
-    }
-
-    /**
-     * Sanitize JSON settings
-     *
-     * @param array $settings Settings array
-     * @return array Sanitized settings
-     */
-    private static function sanitize_json_settings( $settings ) {
-        if ( ! is_array( $settings ) ) {
-            return [];
-        }
-        
-        // Add specific sanitization rules for different setting types
-        $sanitized = [];
-        
-        foreach ( $settings as $key => $value ) {
-            $key = sanitize_key( $key );
-            
-            if ( is_string( $value ) ) {
-                $sanitized[ $key ] = sanitize_text_field( $value );
-            } elseif ( is_numeric( $value ) ) {
-                $sanitized[ $key ] = is_float( $value ) ? floatval( $value ) : intval( $value );
-            } elseif ( is_array( $value ) ) {
-                $sanitized[ $key ] = self::sanitize_json_settings( $value );
-            } elseif ( is_bool( $value ) ) {
-                $sanitized[ $key ] = (bool) $value;
-            }
-        }
-        
-        return $sanitized;
-    }
-
-    /**
-     * Sanitize targeting rules
-     *
-     * @param array $rules Targeting rules
-     * @return array Sanitized targeting rules
-     */
-    private static function sanitize_targeting_rules( $rules ) {
-        // Implementation for targeting rules sanitization
-        return self::sanitize_json_settings( $rules );
-    }
-
-    /**
-     * Sanitize schedule config
-     *
-     * @param array $config Schedule configuration
-     * @return array Sanitized schedule config
-     */
-    private static function sanitize_schedule_config( $config ) {
-        if ( ! is_array( $config ) ) {
-            return [];
-        }
-        
-        return [
-            'start_date' => sanitize_text_field( $config['start_date'] ?? '' ),
-            'end_date' => sanitize_text_field( $config['end_date'] ?? '' ),
-            'timezone' => sanitize_text_field( $config['timezone'] ?? 'UTC' ),
-            'active_days' => array_map( 'intval', $config['active_days'] ?? [] ),
-            'active_hours' => [
-                'start' => intval( $config['active_hours']['start'] ?? 0 ),
-                'end' => intval( $config['active_hours']['end'] ?? 23 )
-            ]
-        ];
-    }
-
-    /**
-     * Sanitize design config
-     *
-     * @param array $config Design configuration
-     * @return array Sanitized design config
-     */
-    private static function sanitize_design_config( $config ) {
-        if ( ! is_array( $config ) ) {
-            return [];
-        }
-        
-        return [
-            'template' => sanitize_key( $config['template'] ?? 'default' ),
-            'colors' => [
-                'primary' => sanitize_hex_color( $config['colors']['primary'] ?? '#e92d3b' ),
-                'secondary' => sanitize_hex_color( $config['colors']['secondary'] ?? '#333333' ),
-                'background' => sanitize_hex_color( $config['colors']['background'] ?? '#ffffff' )
-            ],
-            'typography' => [
-                'font_family' => sanitize_text_field( $config['typography']['font_family'] ?? 'inherit' ),
-                'font_size' => intval( $config['typography']['font_size'] ?? 14 )
-            ],
-            'layout' => sanitize_key( $config['layout'] ?? 'default' )
-        ];
-    }
-
-    /**
      * Get client IP address securely
-     *
-     * @return string Client IP address
      */
     public static function get_client_ip() {
-        $headers = [
+        $ip_keys = [
             'HTTP_CF_CONNECTING_IP',     // Cloudflare
-            'HTTP_X_FORWARDED_FOR',      // Load balancers/proxies
-            'HTTP_X_FORWARDED',          // Load balancers/proxies
-            'HTTP_X_CLUSTER_CLIENT_IP',  // Cluster environments
-            'HTTP_CLIENT_IP',            // Some proxies
+            'HTTP_X_FORWARDED_FOR',      // Proxy
+            'HTTP_X_FORWARDED',          // Proxy
+            'HTTP_X_CLUSTER_CLIENT_IP',  // Cluster
+            'HTTP_CLIENT_IP',            // Proxy
             'REMOTE_ADDR'                // Standard
         ];
         
-        foreach ( $headers as $header ) {
-            if ( ! empty( $_SERVER[ $header ] ) ) {
-                $ips = explode( ',', $_SERVER[ $header ] );
+        foreach ( $ip_keys as $key ) {
+            if ( ! empty( $_SERVER[ $key ] ) ) {
+                $ips = explode( ',', $_SERVER[ $key ] );
                 $ip = trim( $ips[0] );
                 
+                // Validate IP address
                 if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
                     return $ip;
                 }
             }
         }
         
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        // Fallback to any valid IP
+        foreach ( $ip_keys as $key ) {
+            if ( ! empty( $_SERVER[ $key ] ) ) {
+                $ips = explode( ',', $_SERVER[ $key ] );
+                $ip = trim( $ips[0] );
+                
+                if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+                    return $ip;
+                }
+            }
+        }
+        
+        return '127.0.0.1'; // Ultimate fallback
+    }
+    
+    /**
+     * Sanitize campaign data for AJAX handlers
+     *
+     * @param array $data Raw campaign data
+     * @return array Sanitized campaign data
+     */
+    public static function sanitize_campaign_data( $data ) {
+        $sanitized = [];
+        
+        // Basic string fields
+        $string_fields = [
+            'id', 'name', 'description', 'type', 'status'
+        ];
+        
+        foreach ( $string_fields as $field ) {
+            if ( isset( $data[ $field ] ) ) {
+                $sanitized[ $field ] = sanitize_text_field( $data[ $field ] );
+            }
+        }
+        
+        // Integer fields
+        $int_fields = [
+            'priority', 'usage_limit'
+        ];
+        
+        foreach ( $int_fields as $field ) {
+            if ( isset( $data[ $field ] ) ) {
+                $sanitized[ $field ] = (int) $data[ $field ];
+            }
+        }
+        
+        // Date fields
+        $date_fields = [
+            'start_date', 'end_date'
+        ];
+        
+        foreach ( $date_fields as $field ) {
+            if ( isset( $data[ $field ] ) && ! empty( $data[ $field ] ) ) {
+                $sanitized[ $field ] = sanitize_text_field( $data[ $field ] );
+            }
+        }
+        
+        // JSON/Complex fields that need special handling
+        $json_fields = [
+            'settings', 'targeting_rules', 'schedule_config', 'design_config'
+        ];
+        
+        foreach ( $json_fields as $field ) {
+            if ( isset( $data[ $field ] ) ) {
+                if ( is_string( $data[ $field ] ) ) {
+                    // Validate JSON string
+                    $decoded = json_decode( $data[ $field ], true );
+                    if ( json_last_error() === JSON_ERROR_NONE ) {
+                        $sanitized[ $field ] = self::sanitize_json_data( $decoded );
+                    }
+                } elseif ( is_array( $data[ $field ] ) ) {
+                    $sanitized[ $field ] = self::sanitize_json_data( $data[ $field ] );
+                }
+            }
+        }
+        
+        // Selected products array (from the product search)
+        if ( isset( $data['selected_products'] ) && is_array( $data['selected_products'] ) ) {
+            $sanitized['selected_products'] = [];
+            
+            foreach ( $data['selected_products'] as $product_id => $product_data ) {
+                $product_id = (int) $product_id;
+                
+                if ( $product_id > 0 && is_array( $product_data ) ) {
+                    $sanitized['selected_products'][ $product_id ] = [
+                        'id' => $product_id,
+                        'name' => sanitize_text_field( $product_data['name'] ?? '' ),
+                        'quantity' => max( 1, (int) ( $product_data['quantity'] ?? 1 ) )
+                    ];
+                }
+            }
+        }
+        
+        return $sanitized;
+    }
+    
+    /**
+     * Recursively sanitize JSON data
+     *
+     * @param mixed $data Data to sanitize
+     * @return mixed Sanitized data
+     */
+    private static function sanitize_json_data( $data ) {
+        if ( is_array( $data ) ) {
+            $sanitized = [];
+            
+            foreach ( $data as $key => $value ) {
+                $clean_key = sanitize_key( $key );
+                $sanitized[ $clean_key ] = self::sanitize_json_data( $value );
+            }
+            
+            return $sanitized;
+        }
+        
+        if ( is_string( $data ) ) {
+            // For strings, use appropriate sanitization based on context
+            if ( filter_var( $data, FILTER_VALIDATE_URL ) ) {
+                return esc_url_raw( $data );
+            }
+            
+            if ( filter_var( $data, FILTER_VALIDATE_EMAIL ) ) {
+                return sanitize_email( $data );
+            }
+            
+            // Default text sanitization
+            return sanitize_text_field( $data );
+        }
+        
+        if ( is_numeric( $data ) ) {
+            return is_float( $data ) ? (float) $data : (int) $data;
+        }
+        
+        if ( is_bool( $data ) ) {
+            return (bool) $data;
+        }
+        
+        // For other types, convert to string and sanitize
+        return sanitize_text_field( (string) $data );
     }
 
     /**

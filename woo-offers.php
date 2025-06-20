@@ -160,6 +160,9 @@ final class WooOffers {
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/SecurityManager.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/DatabaseSchema.php';
         
+        // Campaign classes
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Campaigns/CampaignManager.php';
+        
         // Admin classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/Admin.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/Dashboard.php';
@@ -208,6 +211,9 @@ final class WooOffers {
         
         // Initialize security and database
         WooOffers\Core\DatabaseSchema::init();
+        
+        // Initialize campaign system
+        WooOffers\Campaigns\CampaignManager::init();
         
         // Initialize admin components
         new WooOffers\Admin\Admin();
