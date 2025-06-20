@@ -157,6 +157,8 @@ final class WooOffers {
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Installer.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Assets.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Permissions.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/SecurityManager.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/DatabaseSchema.php';
         
         // Admin classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/Admin.php';
@@ -203,6 +205,9 @@ final class WooOffers {
         // Initialize core components
         new WooOffers\Core\Assets();
         new WooOffers\Core\Permissions();
+        
+        // Initialize security and database
+        WooOffers\Core\DatabaseSchema::init();
         
         // Initialize admin components
         new WooOffers\Admin\Admin();
