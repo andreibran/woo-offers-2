@@ -65,6 +65,10 @@ class CartIntegration {
         // Add AJAX handlers for offer preview
         add_action('wp_ajax_woo_offers_preview', [__CLASS__, 'ajax_preview_offers']);
         add_action('wp_ajax_nopriv_woo_offers_preview', [__CLASS__, 'ajax_preview_offers']);
+
+        // ✅ SECURITY FIX: Add missing AJAX handler for offer application
+        add_action('wp_ajax_woo_offers_apply_offer', [__CLASS__, 'ajax_apply_offer']);
+        add_action('wp_ajax_nopriv_woo_offers_apply_offer', [__CLASS__, 'ajax_apply_offer']);
         
         // Auto-apply eligible offers
         add_action('woocommerce_before_calculate_totals', [__CLASS__, 'auto_apply_eligible_offers'], 10);
@@ -644,6 +648,82 @@ class CartIntegration {
         }
         
         wp_send_json_success($preview_data);
+    }
+    
+    /**
+     * ✅ SECURITY ENHANCED: AJAX handler for offer application
+     * Provides the exact response format expected by frontend.js
+     */
+    public static function ajax_apply_offer() {
+        // Verify nonce - use the same nonce as frontend.js expects
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'woo_offers_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'woo-offers'),
+                'code' => 'nonce_failed'
+            ]);
+        }
+
+        $offer_id = intval($_POST['offer_id'] ?? 0);
+        $product_id = intval($_POST['product_id'] ?? 0);
+
+        if ($offer_id === 0) {
+            wp_send_json_error([
+                'message' => __('Invalid offer ID', 'woo-offers'),
+                'code' => 'invalid_offer_id'
+            ]);
+        }
+
+        // Check if cart is available
+        if (!self::is_cart_available()) {
+            wp_send_json_error([
+                'message' => __('Cart is not available', 'woo-offers'),
+                'code' => 'cart_not_available'
+            ]);
+        }
+
+        try {
+            $result = self::manually_apply_offer($offer_id);
+            
+            if (is_wp_error($result)) {
+                wp_send_json_error([
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ]);
+            }
+
+            // Get the applied offer details for response
+            $applied_offer_data = self::get_applied_offer_data($offer_id);
+            
+            // ✅ FRONTEND COMPATIBLE: Return expected response format
+            wp_send_json_success([
+                'message' => __('Offer applied successfully!', 'woo-offers'),
+                'discount_amount' => $applied_offer_data['discount_amount'] ?? 0,
+                'coupon_code' => $applied_offer_data['coupon_code'] ?? '',
+                'redirect_to_cart' => apply_filters('woo_offers_redirect_after_apply', false, $offer_id),
+                'cart_url' => wc_get_cart_url(),
+                'cart_fragments' => true // Trigger cart refresh
+            ]);
+        } catch (Exception $e) {
+            error_log('WooOffers - Offer application error: ' . $e->getMessage());
+            
+            wp_send_json_error([
+                'message' => __('Failed to apply offer. Please try again.', 'woo-offers'),
+                'code' => 'application_failed'
+            ]);
+        }
+    }
+    
+    /**
+     * Get applied offer data for AJAX response
+     */
+    private static function get_applied_offer_data($offer_id) {
+        foreach (self::$applied_offers as $applied_offer) {
+            if ($applied_offer['offer_id'] == $offer_id) {
+                return $applied_offer;
+            }
+        }
+        
+        return ['discount_amount' => 0, 'coupon_code' => ''];
     }
     
     /**

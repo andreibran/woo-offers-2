@@ -153,6 +153,9 @@ final class WooOffers {
      * Include required files
      */
     private function includes() {
+        // Load autoloader first
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Autoloader.php';
+        
         // Core classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Installer.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Core/Assets.php';
@@ -162,6 +165,11 @@ final class WooOffers {
         
         // Campaign classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Campaigns/CampaignManager.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Campaigns/CampaignFactory.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Campaigns/TemplateEngine.php';
+        
+        // Analytics classes
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Analytics/AnalyticsManager.php';
         
         // Admin classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/Admin.php';
@@ -170,6 +178,8 @@ final class WooOffers {
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/Analytics.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/SetupWizard.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/class-offers-list-table.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/CampaignAdmin.php';
+        require_once WOO_OFFERS_PLUGIN_DIR . 'src/Admin/TemplateRenderer.php';
         
         // Frontend classes
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Frontend/Display.php';
@@ -192,6 +202,9 @@ final class WooOffers {
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Offers/Types/PercentageDiscountEngine.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Offers/Types/FixedDiscountEngine.php';
         require_once WOO_OFFERS_PLUGIN_DIR . 'src/Offers/Types/FreeShippingEngine.php';
+        
+        // Template functions
+        require_once WOO_OFFERS_PLUGIN_DIR . 'includes/template-functions.php';
     }
 
     /**
@@ -214,6 +227,12 @@ final class WooOffers {
         
         // Initialize campaign system
         WooOffers\Campaigns\CampaignManager::init();
+        
+        // Initialize template engine
+        WooOffers\Campaigns\TemplateEngine::init();
+        
+        // Initialize analytics system
+        WooOffers\Analytics\AnalyticsManager::getInstance();
         
         // Initialize admin components
         new WooOffers\Admin\Admin();

@@ -1,198 +1,369 @@
-# PRD: Woo Offers - WordPress Native Architecture Refactoring
+# PRD: Woo Offers v3.0 - Complete Refactoring with Campaign System
 
 ## 1. Product Overview
 
 ### 1.1 Document Title and Version
-* PRD: Woo Offers - WordPress Native Architecture Refactoring  
-* Version: 2.0 (Refactoring Release)
+* PRD: Woo Offers v3.0 - Complete Architecture Refactoring and Campaign System
+* Version: 3.0 (Major Refactoring Release)
 
 ### 1.2 Product Summary
-This PRD outlines the refactoring of Woo Offers from a React-based administrative interface to a WordPress-native implementation using standard WordPress admin patterns, WP_List_Table, Settings API, and traditional PHP-based admin pages. 
+This PRD outlines the complete refactoring of Woo Offers into a robust upsell/cross-sell campaign solution inspired by FunnelKit's architecture and workflow patterns. The refactoring transforms the plugin from a basic offer system into a professional campaign management platform with modern architecture, enhanced security, optimized performance, and intuitive user experience.
 
-The refactoring maintains all core functionality while significantly reducing complexity, improving maintainability, and following WordPress coding standards. The new architecture eliminates build dependencies (webpack, npm, babel), reduces debugging complexity, and provides immediate functionality without compilation steps.
+The new version introduces a campaign-based workflow with wizard-driven creation, comprehensive analytics, A/B testing capabilities, and multiple campaign types (checkout upsells, cart upsells, product page upsells, exit-intent, and post-purchase offers).
 
-The refactored plugin will deliver the same powerful upselling capabilities with a simplified, more accessible codebase that follows WordPress best practices and integrates seamlessly with the WordPress admin experience.
+### 1.3 Key Problems Being Solved
+* **Critical Security Issue**: Product search functionality lacks nonce verification and capability checks
+* **Limited Functionality**: Current offer system is too basic for professional use
+* **Poor User Experience**: No guided workflow for campaign creation
+* **Missing Analytics**: Limited insights into offer performance
+* **Scalability Issues**: Architecture doesn't support complex campaign scenarios
+* **Performance Problems**: No caching system and inefficient database queries
 
 ## 2. Goals
 
 ### 2.1 Technical Goals
-* Eliminate React build dependencies and webpack complexity
-* Reduce codebase complexity by 60-70% 
-* Improve debugging experience with clear PHP error messages
-* Follow WordPress coding standards and admin UI patterns
-* Achieve zero JavaScript build requirements
-* Maintain feature parity with current React implementation
+* Fix critical security vulnerabilities in AJAX handlers
+* Implement campaign-based architecture inspired by FunnelKit
+* Reduce database queries by 60% through intelligent caching
+* Achieve sub-200ms response times for product searches
+* Implement comprehensive security framework
+* Create modular, extensible architecture for future enhancements
 
-### 2.2 Developer Experience Goals  
-* Enable rapid development without build steps
-* Simplify onboarding for WordPress developers
-* Reduce learning curve for maintenance and extensions
-* Provide clear, readable PHP codebase
-* Eliminate node_modules dependencies and vulnerabilities
+### 2.2 Business Goals
+* Increase conversion rates by 20% through better campaign targeting
+* Reduce time to create offers from 30 minutes to 5 minutes via wizard
+* Enable A/B testing for campaign optimization
+* Provide professional-grade analytics and reporting
+* Support complex campaign scenarios (multi-step funnels, exit-intent, etc.)
 
 ### 2.3 User Experience Goals
-* Maintain familiar WordPress admin experience
-* Ensure consistent performance across all admin pages
-* Provide immediate page loads without "Loading..." states
-* Deliver responsive design using WordPress admin CSS
+* Provide guided campaign creation wizard
+* Implement modern, responsive admin interface
+* Offer one-click campaign templates for common scenarios
+* Display real-time performance metrics and insights
+* Enable easy campaign duplication and modification
 
-## 3. Architecture Migration Strategy
+## 3. Architecture Overview
 
-### 3.1 Current State Analysis
-* React-based admin interface with JSX components
-* Webpack build system with multiple dependencies
-* Complex JavaScript state management
-* Custom REST API endpoints for React communication
-* Build artifacts required for functionality
+### 3.1 New Campaign-Based Structure
+Transform from simple "offers" to comprehensive "campaigns" with:
+* **Campaign Types**: Checkout, Cart, Product Page, Exit-Intent, Post-Purchase
+* **Campaign Wizard**: Step-by-step guided creation process
+* **Template System**: Pre-built campaign templates for common scenarios
+* **A/B Testing**: Built-in split testing capabilities
+* **Analytics Dashboard**: Comprehensive performance tracking
 
-### 3.2 Target State Architecture
-* WordPress-native admin pages using standard PHP templates
-* WP_List_Table for offers management
-* WordPress Settings API for configuration
-* Standard WordPress admin forms and interfaces
-* Direct database operations using WordPress functions
+### 3.2 Technical Architecture
+```
+Campaign System Core:
+├── CampaignManager (Central campaign logic)
+├── CampaignTypes (Checkout, Cart, Product, Exit-Intent, Post-Purchase)
+├── CampaignWizard (Guided creation interface)
+├── SecurityManager (Comprehensive security framework)
+├── CacheManager (Intelligent caching system)
+├── AnalyticsManager (Advanced tracking and reporting)
+└── TemplateEngine (Campaign template system)
+```
 
-### 3.3 Migration Approach
-* Phase-by-phase conversion of React components to PHP templates
-* Preserve existing database schema and data structures
-* Maintain API endpoints for frontend functionality
-* Keep offer rendering logic intact for customer-facing features
-* Implement progressive enhancement for JavaScript interactions
+### 3.3 Database Schema Evolution
+* **wp_woo_campaigns**: Main campaign storage with JSON configurations
+* **wp_woo_campaign_analytics**: Detailed event tracking and metrics
+* **wp_woo_campaign_tests**: A/B testing configuration and results
+* **Migration Strategy**: Seamless upgrade from current offers to campaigns
 
-## 4. Refactoring Requirements
+## 4. Critical Security Fixes (Phase 1 - Priority: URGENT)
 
-### 4.1 Admin Dashboard (Priority: High)
-* Convert React dashboard to WordPress admin page with stats widgets
-* Use WordPress admin CSS and UI components
-* Display offer statistics using native WordPress admin cards
-* Implement quick actions using standard WordPress buttons
-* Add contextual help tabs and admin notices
+### 4.1 Product Search Security (CRITICAL)
+**Current Problem**: Product search AJAX handler lacks basic security
+```php
+// CURRENT VULNERABLE CODE:
+public function search_products_ajax() {
+    // ❌ Missing nonce verification
+    // ❌ Missing capability checks  
+    // ❌ No rate limiting
+    $query = sanitize_text_field($_POST['query'] ?? '');
+}
+```
 
-### 4.2 Offers Management (Priority: High)  
-* Implement WP_List_Table for offers overview and management
-* Add bulk actions for offer status changes and deletion
-* Create standard WordPress edit forms for offer configuration
-* Use WordPress media library integration for offer images
-* Implement WordPress-style pagination and filtering
+**Required Solution**:
+* Implement proper nonce verification for all AJAX calls
+* Add capability checks (`edit_products` or `manage_woocommerce`)
+* Implement rate limiting (30 requests per minute per user)
+* Use WooCommerce native Data Store instead of manual queries
+* Add comprehensive error handling and logging
+* Cache search results for 5 minutes to improve performance
 
-### 4.3 Offer Creation Interface (Priority: High)
-* Convert React offer builder to WordPress admin form pages
-* Use metabox layout for different offer configuration sections
-* Implement WordPress nonce security for form submissions
-* Add offer type selection using WordPress radio buttons/select
-* Create preview functionality using WordPress admin AJAX
+### 4.2 SecurityManager Implementation
+Create comprehensive security framework:
+* **Nonce Management**: Unique nonces for each AJAX action
+* **Capability Verification**: Granular permission checking
+* **Rate Limiting**: Prevent abuse of AJAX endpoints
+* **Input Sanitization**: Robust data cleaning for all inputs
+* **SQL Injection Prevention**: Use prepared statements exclusively
+* **XSS Protection**: Proper output escaping throughout
 
-### 4.4 Settings Pages (Priority: Medium)
-* Expand existing WordPress Settings API implementation
-* Add tabbed interface using WordPress admin JavaScript
-* Implement color picker using WordPress color picker component
-* Use WordPress help tabs for setting explanations
-* Add settings import/export using WordPress admin tools
+### 4.3 Data Validation Framework
+* **Campaign Data Sanitization**: Validate all campaign configuration inputs
+* **JSON Schema Validation**: Ensure campaign settings follow defined structure
+* **File Upload Security**: Secure handling of campaign media uploads
+* **API Input Validation**: Comprehensive REST API input validation
 
-### 4.5 Analytics Interface (Priority: Medium)
-* Create analytics dashboard using WordPress admin widgets
-* Implement basic charts using Chart.js with WordPress admin styling
-* Use WordPress date picker for analytics date ranges
-* Add analytics export using WordPress admin CSV generation
-* Display performance metrics in WordPress admin table format
+## 5. New Campaign System (Phase 2)
 
-## 5. Technical Implementation Details
+### 5.1 Campaign Navigation Structure
+```
+Campaigns (Main Menu)
+├── Dashboard (Overview with metrics)
+├── All Campaigns (WP_List_Table management)
+├── Add New Campaign (Wizard interface)
+├── Analytics (Performance reports)
+├── A/B Tests (Testing management)
+├── Templates (Pre-built campaign templates)
+└── Settings (Global configurations)
+```
 
-### 5.1 File Structure Refactoring
-* Remove assets/js/admin React components
-* Remove webpack.config.js and build system
-* Remove package.json and node dependencies
-* Expand src/Admin/ PHP classes for all admin functionality
-* Create templates/ directory for admin page templates
+### 5.2 Campaign Creation Wizard
+**Step 1: Campaign Type Selection**
+* Checkout Upsells (offers during checkout process)
+* Cart Upsells (offers in shopping cart)
+* Product Page Upsells (offers on single product pages)
+* Exit-Intent Upsells (offers when user attempts to leave)
+* Post-Purchase Upsells (offers after successful purchase)
 
-### 5.2 Database Schema (No Changes Required)
-* Maintain existing offers table structure
-* Keep analytics and statistics tables intact
-* Preserve offer meta and configuration storage
-* Ensure data migration is not required
+**Step 2: Campaign Configuration**
+* Products & Targeting (product selection and customer targeting rules)
+* Discount & Conditions (discount types, values, and usage limits)
+* Design & Appearance (visual customization and branding)
+* Schedule & Limitations (campaign timing and usage restrictions)
+* Preview & Testing (campaign preview and test functionality)
 
-### 5.3 Frontend Functionality (Minimal Changes)
-* Keep existing frontend offer display logic
-* Maintain JavaScript for offer interactions
-* Preserve CSS styling for customer-facing offers
-* Retain AJAX functionality for cart updates
+**Step 3: Activation**
+* Final Review (configuration summary and validation)
+* Testing Suite (automated campaign testing)
+* Go Live (campaign activation and monitoring setup)
 
-### 5.4 API Architecture
-* Simplify REST API to support only frontend requirements
-* Remove admin-specific API endpoints
-* Keep customer-facing offer retrieval endpoints
-* Maintain analytics data collection endpoints
+### 5.3 Campaign Types Implementation
+Each campaign type requires specific implementation:
 
-## 6. Implementation Phases
+**Checkout Upsells**:
+* Hook into WooCommerce checkout process
+* Display offers at strategic checkout points
+* Handle offer acceptance and cart modification
+* Track conversion at checkout level
 
-### 6.1 Phase 1: Core Admin Structure (Week 1)
-* Refactor Admin.php to use WordPress admin page callbacks
-* Create basic dashboard with WordPress admin widgets
-* Implement simple offers list using basic HTML table
-* Add basic offer creation form using WordPress form patterns
+**Cart Upsells**:
+* Integrate with cart page and mini-cart
+* Dynamic offer display based on cart contents
+* Real-time cart updates without page refresh
+* Progressive offer suggestions
 
-### 6.2 Phase 2: Enhanced Management Interface (Week 1-2)  
-* Implement WP_List_Table for professional offers management
-* Add bulk actions and advanced filtering
-* Create comprehensive offer edit forms with metaboxes
-* Implement WordPress AJAX for dynamic interactions
+**Product Page Upsells**:
+* Single product page integration
+* Related product suggestions
+* Bundle offer displays
+* Cross-sell recommendations
 
-### 6.3 Phase 3: Analytics and Advanced Features (Week 2)
-* Build analytics dashboard using WordPress widgets and Chart.js
-* Add settings enhancement with tabbed interface
-* Implement offer preview functionality
-* Add import/export capabilities using WordPress tools
+**Exit-Intent Upsells**:
+* JavaScript-based exit detection
+* Modal overlay offer presentations
+* Mobile-friendly touch gesture detection
+* Abandoned cart recovery integration
 
-### 6.4 Phase 4: Testing and Polish (Week 2-3)
-* Comprehensive testing across different WordPress versions
-* Theme compatibility testing
-* Performance optimization and caching integration
-* Documentation updates and code cleanup
+**Post-Purchase Upsells**:
+* Thank you page integration
+* Email follow-up campaigns
+* Customer dashboard offers
+* Loyalty program integration
 
-## 7. User Stories for Refactoring
+## 6. Performance and Caching System (Phase 3)
 
-### 7.1 Developer Experience Stories
+### 6.1 CacheManager Implementation
+* **Campaign Cache**: Store active campaigns by type and context
+* **Product Search Cache**: Cache search results for 5 minutes
+* **Analytics Cache**: Cache performance metrics for 12 hours
+* **Template Cache**: Cache rendered campaign templates
+* **Smart Invalidation**: Intelligent cache clearing on campaign updates
 
-**US-R001: Simplified Development Setup**
-As a developer, I want to start working on the plugin immediately without build steps so that I can focus on features rather than tooling.
-- Acceptance criteria: No npm install, webpack build, or JavaScript compilation required
+### 6.2 Database Optimization
+* **Query Optimization**: Reduce database calls by 60%
+* **Index Strategy**: Strategic database indexing for performance
+* **Batch Operations**: Bulk processing for analytics data
+* **Connection Pooling**: Efficient database connection management
 
-**US-R002: Clear Error Debugging**  
-As a developer, I want to see clear PHP error messages when something goes wrong so that I can quickly identify and fix issues.
-- Acceptance criteria: Standard PHP error reporting, no cryptic JavaScript errors
+### 6.3 Frontend Performance
+* **Asset Optimization**: Minified CSS/JS with conditional loading
+* **Image Optimization**: WebP support and lazy loading
+* **Critical CSS**: Above-the-fold CSS optimization
+* **CDN Integration**: Support for content delivery networks
 
-**US-R003: WordPress Standard Patterns**
-As a WordPress developer, I want the admin interface to use standard WordPress patterns so that I can easily understand and modify the code.
-- Acceptance criteria: Uses WP_List_Table, Settings API, and standard WordPress admin UI components
+## 7. Analytics and Reporting System (Phase 4)
 
-### 7.2 User Experience Stories
+### 7.1 Comprehensive Event Tracking
+* **Campaign Views**: Track when campaigns are displayed to users
+* **Click Tracking**: Monitor interaction with campaign elements
+* **Conversion Tracking**: Record successful campaign conversions
+* **Revenue Attribution**: Track revenue generated by each campaign
+* **User Journey**: Map customer interaction paths
 
-**US-R004: Instant Admin Access**
-As a store owner, I want the admin pages to load instantly without "Loading..." messages so that I can efficiently manage my offers.
-- Acceptance criteria: All admin pages load immediately with full content visible
+### 7.2 Analytics Dashboard
+* **Performance Metrics**: Conversion rates, click-through rates, revenue
+* **Visual Charts**: Interactive charts using Chart.js
+* **Comparison Tools**: Period-over-period performance analysis
+* **Export Capabilities**: CSV/PDF report generation
+* **Real-time Updates**: Live performance monitoring
 
-**US-R005: Familiar WordPress Interface**
-As a WordPress user, I want the plugin to feel like part of WordPress so that I don't need to learn a new interface.
-- Acceptance criteria: Uses standard WordPress admin styling, navigation, and interaction patterns
+### 7.3 A/B Testing Framework
+* **Test Creation**: Easy A/B test setup through wizard
+* **Traffic Distribution**: Configurable traffic allocation
+* **Statistical Significance**: Automatic significance calculation
+* **Winner Declaration**: Automated test winner selection
+* **Test Archives**: Historical test result storage
 
-**US-R006: Maintained Functionality**
-As a current user, I want all my existing offers and settings to continue working exactly as before so that the refactoring doesn't disrupt my business.
-- Acceptance criteria: All offers, settings, and analytics data remain functional and accessible
+## 8. User Interface and Experience (Phase 5)
 
-**US-R007: Offers List Management**
-As a store owner, I want to view and manage all my offers in a standard WordPress table so that I can efficiently organize my promotional campaigns.
-- Acceptance criteria: WP_List_Table implementation with sorting, filtering, bulk actions, and pagination
+### 8.1 Modern Admin Interface
+* **Responsive Design**: Mobile-friendly admin interface
+* **Dark Mode Support**: Automatic theme adaptation
+* **Accessibility**: WCAG 2.1 AA compliance
+* **Loading States**: Smooth loading indicators and transitions
+* **Error Handling**: User-friendly error messages and recovery
 
-**US-R008: Quick Offer Creation**
-As a store owner, I want to create offers using familiar WordPress forms so that I can quickly set up promotions without learning new interfaces.
-- Acceptance criteria: Standard WordPress admin forms with metaboxes, proper validation, and clear field labels
+### 8.2 Campaign Builder UX
+* **Drag & Drop**: Visual campaign element arrangement
+* **Live Preview**: Real-time campaign preview
+* **Template Gallery**: Professionally designed campaign templates
+* **Quick Actions**: One-click campaign operations
+* **Bulk Management**: Multi-campaign operations
 
-**US-R009: Dashboard Overview**
-As a store owner, I want a dashboard that shows my offer performance using WordPress admin widgets so that I can quickly assess my promotional effectiveness.
-- Acceptance criteria: WordPress admin dashboard with stat cards, recent activity, and quick action buttons
+### 8.3 JavaScript Framework
+* **Modern ES6+**: Native JavaScript without heavy frameworks
+* **Component-Based**: Reusable UI components
+* **Event-Driven**: Efficient event handling system
+* **API Integration**: Seamless REST API communication
+* **Progressive Enhancement**: Graceful degradation support
 
-**US-R010: Analytics Access**
-As a store owner, I want to view offer analytics in a format consistent with WordPress admin so that I can analyze performance data effectively.
-- Acceptance criteria: WordPress admin page with charts, tables, and export functionality using familiar WordPress patterns
+## 9. Implementation Phases and Timeline
 
-This refactoring PRD provides a clear roadmap for converting Woo Offers from React-based complexity to WordPress-native simplicity while maintaining all functionality and improving the developer and user experience.
+### Phase 1: Critical Security Fixes (Week 1-2) - URGENT
+**Priority: CRITICAL - Must fix immediately**
+* Fix product search AJAX security vulnerabilities
+* Implement SecurityManager with nonce verification
+* Add capability checks to all admin functions
+* Implement rate limiting for AJAX endpoints
+* Add comprehensive input sanitization
+* Create security audit and testing framework
+
+**Deliverables:**
+* Secure product search functionality
+* SecurityManager class with complete validation framework
+* Rate limiting system for all AJAX calls
+* Security audit report and testing procedures
+
+### Phase 2: Campaign System Foundation (Week 3-5)
+* Design and implement new database schema
+* Create CampaignManager core class
+* Implement basic campaign types (Checkout, Cart, Product)
+* Build campaign creation wizard (basic version)
+* Create campaign management interface using WP_List_Table
+
+**Deliverables:**
+* New database tables with migration scripts
+* Core campaign management system
+* Basic campaign wizard interface
+* Campaign list management page
+* Foundation for all campaign types
+
+### Phase 3: Advanced Campaign Features (Week 6-8)
+* Complete all campaign type implementations
+* Add campaign templates and template engine
+* Implement CacheManager for performance optimization
+* Create advanced targeting and scheduling features
+* Build campaign preview and testing functionality
+
+**Deliverables:**
+* Full campaign type support (all 5 types)
+* Campaign template system with pre-built templates
+* Caching system with 60% performance improvement
+* Advanced campaign scheduling and targeting
+* Comprehensive campaign testing tools
+
+### Phase 4: Analytics and A/B Testing (Week 9-11)
+* Implement AnalyticsManager with comprehensive tracking
+* Create analytics dashboard with charts and reports
+* Build A/B testing framework
+* Add export and reporting capabilities
+* Implement real-time performance monitoring
+
+**Deliverables:**
+* Complete analytics tracking system
+* Interactive analytics dashboard
+* A/B testing framework with statistical analysis
+* Report generation and export tools
+* Real-time performance monitoring
+
+### Phase 5: UI/UX Enhancement (Week 12-13)
+* Implement modern admin interface design
+* Add responsive and mobile-friendly layouts
+* Create advanced JavaScript interactions
+* Implement accessibility features
+* Add progressive enhancement and loading states
+
+**Deliverables:**
+* Modern, responsive admin interface
+* Enhanced user experience with smooth interactions
+* Accessibility compliance (WCAG 2.1 AA)
+* Mobile-friendly administration
+* Progressive enhancement support
+
+### Phase 6: Testing and Documentation (Week 14-15)
+* Comprehensive testing across WordPress versions
+* Performance testing and optimization
+* Security penetration testing
+* Complete documentation and user guides
+* Migration testing from v2.x to v3.0
+
+**Deliverables:**
+* Comprehensive testing suite
+* Performance benchmarks and optimization
+* Security audit and penetration test results
+* Complete user and developer documentation
+* Seamless migration path from previous versions
+
+## 10. Success Metrics
+
+### 10.1 Technical Metrics
+* **Security**: Zero security vulnerabilities in penetration testing
+* **Performance**: <200ms response time for product searches
+* **Cache Hit Rate**: >90% cache effectiveness
+* **Database Efficiency**: 60% reduction in database queries
+* **Code Quality**: 90%+ code coverage in automated tests
+
+### 10.2 User Experience Metrics
+* **Campaign Creation Time**: Reduce from 30 minutes to <5 minutes
+* **Conversion Rate Improvement**: 20% increase in offer acceptance
+* **User Satisfaction**: >4.5/5 rating in user feedback
+* **Support Ticket Reduction**: 50% fewer support requests
+* **Feature Adoption**: >80% of users using new campaign types
+
+### 10.3 Business Metrics
+* **Revenue Impact**: 25% increase in upsell revenue for users
+* **Market Position**: Match or exceed FunnelKit feature parity
+* **User Retention**: 90% user retention after upgrade
+* **New User Acquisition**: 40% increase in new installations
+* **Enterprise Adoption**: Suitable for high-traffic e-commerce sites
+
+## 11. Risk Mitigation
+
+### 11.1 Technical Risks
+* **Data Migration**: Comprehensive backup and rollback procedures
+* **Performance Impact**: Gradual rollout with performance monitoring
+* **Compatibility Issues**: Extensive testing with popular themes/plugins
+* **Security Vulnerabilities**: Regular security audits and penetration testing
+
+### 11.2 User Adoption Risks
+* **Learning Curve**: Comprehensive onboarding and documentation
+* **Feature Complexity**: Progressive disclosure and wizard guidance
+* **Migration Concerns**: Seamless upgrade path with zero data loss
+* **Support Load**: Enhanced documentation and self-service tools
+
+This PRD provides a comprehensive roadmap for transforming Woo Offers into a professional-grade campaign management system while addressing critical security issues and implementing modern architecture patterns. The phased approach ensures manageable implementation while delivering immediate value through security fixes.

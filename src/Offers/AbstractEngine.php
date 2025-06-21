@@ -236,6 +236,6 @@ abstract class AbstractEngine implements EngineInterface {
      * @return \WC_Product|null
      */
     protected function get_product($product_id) {
-        return wc_get_product($product_id);
+        return \wc_get_product($product_id);
     }
 } 

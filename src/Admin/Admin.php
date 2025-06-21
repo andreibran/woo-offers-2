@@ -37,6 +37,16 @@ class Admin {
         add_action( 'current_screen', [ $this, 'add_contextual_help' ] );
         add_filter( 'plugin_action_links_' . WOO_OFFERS_PLUGIN_BASENAME, [ $this, 'plugin_action_links' ] );
         
+        // Initialize the new comprehensive Settings system
+        Settings::init();
+        
+        // Initialize Security and Campaign Integration
+        SecurityAndCampaign::init();
+        
+        // ✅ ENHANCEMENT: Initialize new modular admin components
+        CampaignAdmin::init();
+        TemplateRenderer::init();
+        
         // Metabox registration - Now handled directly in templates
         // add_action( 'admin_init', [ $this, 'register_offer_metaboxes' ] );
         
@@ -48,6 +58,19 @@ class Admin {
         add_action( 'wp_ajax_woo_offers_preview_offer', [ $this, 'preview_offer_ajax' ] );
         add_action( 'wp_ajax_woo_offers_preview_offer_modal', [ $this, 'preview_offer_modal_ajax' ] );
         add_action( 'wp_ajax_woo_offers_dismiss_getting_started', [ $this, 'dismiss_getting_started_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_save_campaign', [ $this, 'save_campaign_ajax' ] );
+        
+        // Modern Campaign Management AJAX hooks
+        add_action( 'wp_ajax_woo_offers_duplicate_campaign', [ $this, 'duplicate_campaign_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_delete_campaign', [ $this, 'delete_campaign_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_toggle_campaign_status', [ $this, 'toggle_campaign_status_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_bulk_campaign_operations', [ $this, 'bulk_campaign_operations_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_get_campaign', [ $this, 'get_campaign_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_update_campaign', [ $this, 'update_campaign_ajax' ] );
+
+        // Enhanced Data Export AJAX hooks
+        add_action( 'wp_ajax_woo_offers_export_campaigns_csv', [ $this, 'export_campaigns_csv_ajax' ] );
+        add_action( 'wp_ajax_woo_offers_export_analytics_enhanced', [ $this, 'export_analytics_enhanced_ajax' ] );
     }
 
     /**
@@ -100,6 +123,26 @@ class Admin {
             [ $this, 'create_offer_page' ]
         );
 
+        // Campaign Wizard submenu
+        add_submenu_page(
+            self::MENU_SLUG,
+            __( 'Create Campaign', 'woo-offers' ),
+            __( 'Create Campaign', 'woo-offers' ),
+            'manage_woocommerce',
+            self::MENU_SLUG . '-campaign-wizard',
+            [ $this, 'campaign_wizard_page' ]
+        );
+
+        // Campaign Builder submenu
+        add_submenu_page(
+            self::MENU_SLUG,
+            __( 'Campaign Builder', 'woo-offers' ),
+            __( 'Campaign Builder', 'woo-offers' ),
+            'manage_woocommerce',
+            self::MENU_SLUG . '-campaign-builder',
+            [ $this, 'campaign_builder_page' ]
+        );
+
         // Analytics submenu
         add_submenu_page(
             self::MENU_SLUG,
@@ -120,13 +163,13 @@ class Admin {
             [ $this, 'ab_tests_page' ]
         );
 
-        // Settings submenu
+        // Settings submenu - using Settings class page slug
         add_submenu_page(
             self::MENU_SLUG,
             __( 'Settings', 'woo-offers' ),
             __( 'Settings', 'woo-offers' ),
-            'manage_woocommerce',
-            self::MENU_SLUG . '-settings',
+            'manage_options',
+            Settings::SETTINGS_PAGE,
             [ $this, 'settings_page' ]
         );
 
@@ -320,6 +363,20 @@ class Admin {
     }
 
     /**
+     * Campaign Wizard page content
+     */
+    public function campaign_wizard_page() {
+        $this->render_admin_page( 'campaign-wizard' );
+    }
+
+    /**
+     * Campaign Builder page content
+     */
+    public function campaign_builder_page() {
+        $this->render_admin_page( 'campaign-builder' );
+    }
+
+    /**
      * Analytics page content
      */
     public function analytics_page() {
@@ -337,35 +394,8 @@ class Admin {
      * Settings page content
      */
     public function settings_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields( 'woo_offers_settings_group' );
-                ?>
-                <div class="woo-offers-settings-tabs">
-                    <nav class="nav-tab-wrapper">
-                        <a href="#general" class="nav-tab nav-tab-active"><?php _e( 'General', 'woo-offers' ); ?></a>
-                        <a href="#display" class="nav-tab"><?php _e( 'Display', 'woo-offers' ); ?></a>
-                        <a href="#performance" class="nav-tab"><?php _e( 'Performance', 'woo-offers' ); ?></a>
-                    </nav>
-                    <div class="tab-content">
-                        <div id="general" class="tab-pane active">
-                            <?php do_settings_sections( 'woo_offers_general' ); ?>
-                        </div>
-                        <div id="display" class="tab-pane">
-                            <?php do_settings_sections( 'woo_offers_display' ); ?>
-                        </div>
-                        <div id="performance" class="tab-pane">
-                            <?php do_settings_sections( 'woo_offers_performance' ); ?>
-                        </div>
-                    </div>
-                </div>
-                <?php submit_button(); ?>
-            </form>
-        </div>
-        <?php
+        // Use the new comprehensive Settings class
+        Settings::render_settings_page();
     }
 
     /**
@@ -394,28 +424,42 @@ class Admin {
     }
 
     /**
-     * Render admin page using PHP templates
+     * Render admin page using enhanced template system
      */
-    private function render_admin_page( $page ) {
-        $template_file = WOO_OFFERS_PLUGIN_PATH . 'templates/admin/' . $page . '.php';
-        $wrapper_file = WOO_OFFERS_PLUGIN_PATH . 'templates/admin/admin-wrapper.php';
-        
-        if ( file_exists( $wrapper_file ) ) {
-            include $wrapper_file;
+    private function render_admin_page( $page, $data = [] ) {
+        // ✅ ENHANCEMENT: Use new TemplateRenderer for better security and structure
+        if ( class_exists( 'WooOffers\Admin\TemplateRenderer' ) ) {
+            // Enhanced template rendering with new directory structure
+            $enhanced_data = array_merge( [
+                'page_title' => get_admin_page_title(),
+                'page_class' => 'woo-offers-' . $page,
+                'current_user' => wp_get_current_user(),
+                'admin_nonce' => wp_create_nonce( 'woo_offers_admin_' . $page )
+            ], $data );
+            
+            TemplateRenderer::render_admin_page( $page, $enhanced_data );
         } else {
-            // Fallback if wrapper doesn't exist
-            ?>
-            <div class="wrap">
-                <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-                <?php
-                if ( file_exists( $template_file ) ) {
-                    include $template_file;
-                } else {
-                    echo '<p>' . __( 'Template not found.', 'woo-offers' ) . '</p>';
-                }
+            // Fallback to traditional template rendering
+            $template_file = WOO_OFFERS_PLUGIN_PATH . 'templates/admin/' . $page . '.php';
+            $wrapper_file = WOO_OFFERS_PLUGIN_PATH . 'templates/admin/admin-wrapper.php';
+            
+            if ( file_exists( $wrapper_file ) ) {
+                include $wrapper_file;
+            } else {
+                // Basic fallback
                 ?>
-            </div>
-            <?php
+                <div class="wrap">
+                    <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+                    <?php
+                    if ( file_exists( $template_file ) ) {
+                        include $template_file;
+                    } else {
+                        echo '<p>' . __( 'Template not found.', 'woo-offers' ) . '</p>';
+                    }
+                    ?>
+                </div>
+                <?php
+            }
         }
     }
 
@@ -469,14 +513,25 @@ class Admin {
                 'deleteOffer' => wp_create_nonce( 'woo_offers_delete_offer' ),
                 'saveSettings' => wp_create_nonce( 'woo_offers_save_settings' ),
                 'analytics' => wp_create_nonce( 'woo_offers_analytics' ),
+                'duplicateCampaign' => wp_create_nonce( 'woo_offers_duplicate_campaign' ),
+                'deleteCampaign' => wp_create_nonce( 'woo_offers_delete_campaign' ),
+                'toggleCampaignStatus' => wp_create_nonce( 'woo_offers_toggle_campaign_status' ),
+                'bulkCampaignOperations' => wp_create_nonce( 'woo_offers_bulk_campaign_operations' ),
+                'getCampaign' => wp_create_nonce( 'woo_offers_get_campaign' ),
+                'updateCampaign' => wp_create_nonce( 'woo_offers_update_campaign' ),
             ],
             'pluginUrl' => WOO_OFFERS_PLUGIN_URL,
             'currentPage' => $_GET['page'] ?? '',
             'strings' => [
                 'confirmDelete' => __( 'Are you sure you want to delete this offer?', 'woo-offers' ),
                 'confirmBulkDelete' => __( 'Are you sure you want to delete the selected offers?', 'woo-offers' ),
+                'confirmDuplicate' => __( 'Are you sure you want to duplicate this campaign?', 'woo-offers' ),
                 'offerSaved' => __( 'Offer saved successfully!', 'woo-offers' ),
                 'offerDeleted' => __( 'Offer deleted successfully!', 'woo-offers' ),
+                'campaignDuplicated' => __( 'Campaign duplicated successfully!', 'woo-offers' ),
+                'campaignDeleted' => __( 'Campaign deleted successfully!', 'woo-offers' ),
+                'campaignStatusUpdated' => __( 'Campaign status updated successfully!', 'woo-offers' ),
+                'bulkOperationCompleted' => __( 'Bulk operation completed successfully!', 'woo-offers' ),
                 'error' => __( 'An error occurred. Please try again.', 'woo-offers' ),
                 'selectItems' => __( 'Please select at least one item.', 'woo-offers' ),
                 'filtering' => __( 'Filtering...', 'woo-offers' ),
@@ -487,6 +542,8 @@ class Admin {
                 'productRemoved' => __( 'Product removed.', 'woo-offers' ),
                 'rateLimitExceeded' => __( 'Too many requests. Please wait.', 'woo-offers' ),
                 'accessDenied' => __( 'Access denied. Please refresh.', 'woo-offers' ),
+                'loading' => __( 'Loading...', 'woo-offers' ),
+                'saved' => __( 'Saved!', 'woo-offers' ),
             ]
         ]);
     }
@@ -2464,6 +2521,151 @@ class Admin {
     }
 
     /**
+     * AJAX handler for saving campaigns from wizard
+     */
+    public function save_campaign_ajax() {
+        // Verify nonce
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_save_offer' ) ) {
+            wp_send_json_error( [
+                'message' => __( 'Security check failed', 'woo-offers' )
+            ] );
+        }
+
+        // Check user capability
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( [
+                'message' => __( 'Insufficient permissions', 'woo-offers' )
+            ] );
+        }
+
+        // Get campaign data
+        $campaign_data_json = sanitize_text_field( $_POST['campaign_data'] ?? '' );
+        if ( empty( $campaign_data_json ) ) {
+            wp_send_json_error( [
+                'message' => __( 'No campaign data received', 'woo-offers' )
+            ] );
+        }
+
+        // Decode campaign data
+        $campaign_data = json_decode( $campaign_data_json, true );
+        if ( json_last_error() !== JSON_ERROR_NONE ) {
+            wp_send_json_error( [
+                'message' => __( 'Invalid campaign data format', 'woo-offers' )
+            ] );
+        }
+
+        try {
+            // Validate required fields
+            if ( empty( $campaign_data['campaignName'] ) || empty( $campaign_data['campaignType'] ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Campaign name and type are required', 'woo-offers' )
+                ] );
+            }
+
+            // Get CampaignManager instance
+            $campaign_manager = new \WooOffers\Campaigns\CampaignManager();
+
+            // Prepare campaign configuration
+            $config = [
+                'name' => sanitize_text_field( $campaign_data['campaignName'] ),
+                'type' => sanitize_text_field( $campaign_data['campaignType'] ),
+                'priority' => sanitize_text_field( $campaign_data['campaignPriority'] ?? 'medium' ),
+                'description' => sanitize_textarea_field( $campaign_data['campaignDescription'] ?? '' ),
+                'status' => sanitize_text_field( $campaign_data['status'] ?? 'draft' ),
+                'targeting' => [
+                    'products' => $this->sanitize_targeting_products( $campaign_data['targetProducts'] ?? 'all' ),
+                    'users' => sanitize_text_field( $campaign_data['targetUsers'] ?? 'all' )
+                ],
+                'configuration' => $this->sanitize_campaign_configuration( $campaign_data, $campaign_data['campaignType'] ),
+                'created_by' => get_current_user_id(),
+                'created_at' => current_time( 'mysql' ),
+                'updated_at' => current_time( 'mysql' )
+            ];
+
+            // Create campaign
+            $campaign_id = $campaign_manager->create_campaign( $config );
+
+            if ( $campaign_id ) {
+                wp_send_json_success( [
+                    'message' => __( 'Campaign saved successfully!', 'woo-offers' ),
+                    'campaign_id' => $campaign_id,
+                    'redirect_url' => admin_url( 'admin.php?page=woo-offers-offers' )
+                ] );
+            } else {
+                wp_send_json_error( [
+                    'message' => __( 'Failed to create campaign', 'woo-offers' )
+                ] );
+            }
+
+        } catch ( Exception $e ) {
+            error_log( 'Woo Offers Campaign Save Error: ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'An error occurred while saving the campaign', 'woo-offers' )
+            ] );
+        }
+    }
+
+    /**
+     * Sanitize targeting products data
+     */
+    private function sanitize_targeting_products( $products ) {
+        if ( is_array( $products ) ) {
+            return array_map( 'sanitize_text_field', $products );
+        }
+        return sanitize_text_field( $products );
+    }
+
+    /**
+     * Sanitize campaign configuration based on type
+     */
+    private function sanitize_campaign_configuration( $data, $campaign_type ) {
+        $config = [];
+
+        // Common configuration
+        $config['general'] = [
+            'auto_close' => isset( $data['autoClose'] ) ? (bool) $data['autoClose'] : false,
+            'display_limit' => isset( $data['displayLimit'] ) ? absint( $data['displayLimit'] ) : 0
+        ];
+
+        // Type-specific configuration
+        switch ( $campaign_type ) {
+            case 'checkout':
+                $config['checkout'] = [
+                    'show_before_payment' => isset( $data['showBeforePayment'] ) ? (bool) $data['showBeforePayment'] : false,
+                    'show_after_payment' => isset( $data['showAfterPayment'] ) ? (bool) $data['showAfterPayment'] : false
+                ];
+                break;
+
+            case 'cart':
+                $config['cart'] = [
+                    'position' => sanitize_text_field( $data['cartPosition'] ?? 'below' )
+                ];
+                break;
+
+            case 'product':
+                $config['product'] = [
+                    'position' => sanitize_text_field( $data['productPosition'] ?? 'before_add_to_cart' )
+                ];
+                break;
+
+            case 'exit-intent':
+                $config['exit_intent'] = [
+                    'delay' => absint( $data['exitDelay'] ?? 3 ),
+                    'mobile_scroll_trigger' => isset( $data['mobileScrollTrigger'] ) ? (bool) $data['mobileScrollTrigger'] : false
+                ];
+                break;
+
+            case 'post-purchase':
+                $config['post_purchase'] = [
+                    'timing' => sanitize_text_field( $data['triggerTiming'] ?? 'immediately' )
+                ];
+                break;
+        }
+
+        return $config;
+    }
+
+    /**
      * Format product data safely to prevent null values
      */
     private function format_product_data( $product ) {
@@ -2491,5 +2693,701 @@ class Admin {
             'status' => ! empty( $status ) ? (string) $status : 'publish',
             'stock_status' => ! empty( $stock_status ) ? (string) $stock_status : 'instock'
         ];
+    }
+
+    // ===================================================================
+    // MODERN CAMPAIGN MANAGEMENT AJAX HANDLERS
+    // Integration with CampaignManager for CRUD operations
+    // ===================================================================
+
+    /**
+     * AJAX handler for duplicating campaigns
+     */
+    public function duplicate_campaign_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $campaign_id = absint( $_POST['campaign_id'] ?? 0 );
+
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+
+            // Use CampaignManager to duplicate
+            $result = \WooOffers\Campaigns\CampaignManager::duplicate_campaign( $campaign_id );
+
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( [
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ] );
+            }
+
+            wp_send_json_success( [
+                'message' => __( 'Campaign duplicated successfully!', 'woo-offers' ),
+                'new_campaign_id' => $result,
+                'redirect_url' => admin_url( 'admin.php?page=woo-offers-offers' )
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Campaign duplication failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to duplicate campaign', 'woo-offers' ),
+                'code' => 'DUPLICATION_ERROR'
+            ] );
+        }
+    }
+
+    /**
+     * AJAX handler for deleting campaigns
+     */
+    public function delete_campaign_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $campaign_id = absint( $_POST['campaign_id'] ?? 0 );
+
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+
+            // Use CampaignManager to delete
+            $result = \WooOffers\Campaigns\CampaignManager::delete_campaign( $campaign_id );
+
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( [
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ] );
+            }
+
+            wp_send_json_success( [
+                'message' => __( 'Campaign deleted successfully!', 'woo-offers' ),
+                'campaign_id' => $campaign_id
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Campaign deletion failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to delete campaign', 'woo-offers' ),
+                'code' => 'DELETION_ERROR'
+            ] );
+        }
+    }
+
+    /**
+     * AJAX handler for toggling campaign status
+     */
+    public function toggle_campaign_status_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $campaign_id = absint( $_POST['campaign_id'] ?? 0 );
+
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+
+            // Use CampaignManager to toggle status
+            $result = \WooOffers\Campaigns\CampaignManager::toggle_campaign_status( $campaign_id );
+
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( [
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ] );
+            }
+
+            // Get updated campaign to return new status
+            $campaign = \WooOffers\Campaigns\CampaignManager::get_campaign( $campaign_id );
+
+            wp_send_json_success( [
+                'message' => __( 'Campaign status updated successfully!', 'woo-offers' ),
+                'campaign_id' => $campaign_id,
+                'new_status' => $campaign ? $campaign->status : 'unknown'
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Campaign status toggle failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to update campaign status', 'woo-offers' ),
+                'code' => 'STATUS_UPDATE_ERROR'
+            ] );
+        }
+    }
+
+    /**
+     * AJAX handler for bulk campaign operations
+     */
+    public function bulk_campaign_operations_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $action = sanitize_text_field( $_POST['bulk_action'] ?? '' );
+            $campaign_ids_raw = $_POST['campaign_ids'] ?? [];
+            
+            // Validate campaign IDs
+            $campaign_ids = array_map( 'absint', (array) $campaign_ids_raw );
+            $campaign_ids = array_filter( $campaign_ids );
+
+            if ( empty( $campaign_ids ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'No campaigns selected', 'woo-offers' ),
+                    'code' => 'NO_SELECTION'
+                ] );
+            }
+
+            if ( empty( $action ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'No action specified', 'woo-offers' ),
+                    'code' => 'NO_ACTION'
+                ] );
+            }
+
+            $results = [];
+            $success_count = 0;
+            $error_count = 0;
+
+            foreach ( $campaign_ids as $campaign_id ) {
+                $result = null;
+
+                switch ( $action ) {
+                    case 'enable':
+                        $result = \WooOffers\Campaigns\CampaignManager::update_campaign( $campaign_id, [ 'status' => 'active' ] );
+                        break;
+                    case 'disable':
+                        $result = \WooOffers\Campaigns\CampaignManager::update_campaign( $campaign_id, [ 'status' => 'paused' ] );
+                        break;
+                    case 'delete':
+                        $result = \WooOffers\Campaigns\CampaignManager::delete_campaign( $campaign_id );
+                        break;
+                    default:
+                        $result = new \WP_Error( 'invalid_action', 'Invalid bulk action' );
+                }
+
+                if ( is_wp_error( $result ) ) {
+                    $error_count++;
+                    $results[] = [
+                        'campaign_id' => $campaign_id,
+                        'success' => false,
+                        'error' => $result->get_error_message()
+                    ];
+                } else {
+                    $success_count++;
+                    $results[] = [
+                        'campaign_id' => $campaign_id,
+                        'success' => true
+                    ];
+                }
+            }
+
+            $message = sprintf(
+                __( 'Bulk operation completed: %d successful, %d failed', 'woo-offers' ),
+                $success_count,
+                $error_count
+            );
+
+            wp_send_json_success( [
+                'message' => $message,
+                'success_count' => $success_count,
+                'error_count' => $error_count,
+                'results' => $results
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Bulk campaign operation failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Bulk operation failed', 'woo-offers' ),
+                'code' => 'BULK_OPERATION_ERROR'
+            ] );
+        }
+    }
+
+    /**
+     * AJAX handler for getting campaign data (for edit/view operations)
+     */
+    public function get_campaign_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'edit_posts' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $campaign_id = absint( $_POST['campaign_id'] ?? 0 );
+
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+
+            // Get campaign from CampaignManager
+            $campaign = \WooOffers\Campaigns\CampaignManager::get_campaign( $campaign_id );
+
+            if ( ! $campaign ) {
+                wp_send_json_error( [
+                    'message' => __( 'Campaign not found', 'woo-offers' ),
+                    'code' => 'NOT_FOUND'
+                ] );
+            }
+
+            // Format campaign data for frontend
+            $formatted_campaign = [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'description' => $campaign->description,
+                'type' => $campaign->type,
+                'status' => $campaign->status,
+                'priority' => $campaign->priority,
+                'settings' => $campaign->settings,
+                'targeting_rules' => $campaign->targeting_rules,
+                'schedule_config' => $campaign->schedule_config,
+                'design_config' => $campaign->design_config,
+                'usage_limit' => $campaign->usage_limit,
+                'start_date' => $campaign->start_date,
+                'end_date' => $campaign->end_date,
+                'created_at' => $campaign->created_at,
+                'updated_at' => $campaign->updated_at
+            ];
+
+            wp_send_json_success( [
+                'campaign' => $formatted_campaign,
+                'message' => __( 'Campaign data retrieved successfully', 'woo-offers' )
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Get campaign data failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to retrieve campaign data', 'woo-offers' ),
+                'code' => 'GET_CAMPAIGN_ERROR'
+            ] );
+        }
+    }
+
+    /**
+     * AJAX handler for updating campaign data
+     */
+    public function update_campaign_ajax() {
+        try {
+            // Verify nonce
+            if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Security check failed', 'woo-offers' ),
+                    'code' => 'SECURITY_ERROR'
+                ] );
+            }
+
+            // Check user capability
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Insufficient permissions', 'woo-offers' ),
+                    'code' => 'PERMISSION_ERROR'
+                ] );
+            }
+
+            $campaign_id = absint( $_POST['campaign_id'] ?? 0 );
+            $update_data = $_POST['campaign_data'] ?? [];
+
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+
+            // Sanitize update data
+            $sanitized_data = [];
+            $allowed_fields = [ 'name', 'description', 'status', 'priority', 'settings', 'targeting_rules', 'schedule_config', 'design_config', 'usage_limit', 'start_date', 'end_date' ];
+
+            foreach ( $allowed_fields as $field ) {
+                if ( isset( $update_data[ $field ] ) ) {
+                    if ( in_array( $field, [ 'settings', 'targeting_rules', 'schedule_config', 'design_config' ] ) ) {
+                        // JSON fields
+                        $sanitized_data[ $field ] = $update_data[ $field ];
+                    } else {
+                        // Regular fields
+                        $sanitized_data[ $field ] = sanitize_text_field( $update_data[ $field ] );
+                    }
+                }
+            }
+
+            if ( empty( $sanitized_data ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'No valid data to update', 'woo-offers' ),
+                    'code' => 'NO_DATA'
+                ] );
+            }
+
+            // Use CampaignManager to update
+            $result = \WooOffers\Campaigns\CampaignManager::update_campaign( $campaign_id, $sanitized_data );
+
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( [
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ] );
+            }
+
+            wp_send_json_success( [
+                'message' => __( 'Campaign updated successfully!', 'woo-offers' ),
+                'campaign_id' => $campaign_id
+            ] );
+
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Campaign update failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to update campaign', 'woo-offers' ),
+                'code' => 'UPDATE_ERROR'
+            ] );
+        }
+    }
+
+    // ===================================================================
+    // ENHANCED DATA EXPORT FUNCTIONALITY
+    // Comprehensive export capabilities for analytics and campaigns
+    // ===================================================================
+
+    /**
+     * Export campaigns as CSV via AJAX
+     */
+    public function export_campaigns_csv_ajax() {
+        // Verify nonce
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security check failed', 'woo-offers' ) ] );
+        }
+
+        // Check permissions
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'You do not have permission to export campaigns', 'woo-offers' ) ] );
+        }
+
+        try {
+            $filename = $this->generate_campaigns_csv();
+            wp_send_json_success( [ 
+                'message' => __( 'Campaigns exported successfully', 'woo-offers' ),
+                'filename' => $filename
+            ] );
+        } catch ( Exception $e ) {
+            wp_send_json_error( [ 
+                'message' => sprintf( __( 'Export failed: %s', 'woo-offers' ), $e->getMessage() )
+            ] );
+        }
+    }
+
+    /**
+     * Generate campaigns CSV file and return download
+     */
+    private function generate_campaigns_csv() {
+        // Get campaign manager
+        $campaign_manager = new \WooOffers\Campaigns\CampaignManager();
+        $campaigns = $campaign_manager->get_campaigns();
+
+        if ( empty( $campaigns ) ) {
+            throw new Exception( __( 'No campaigns found to export', 'woo-offers' ) );
+        }
+
+        $filename = 'woo-offers-campaigns-' . date( 'Y-m-d-H-i-s' ) . '.csv';
+        $file_path = wp_upload_dir()['basedir'] . '/' . $filename;
+
+        // Create CSV content
+        $output = fopen( $file_path, 'w' );
+        
+        // Add UTF-8 BOM for Excel compatibility
+        fwrite( $output, "\xEF\xBB\xBF" );
+
+        // Add CSV headers
+        fputcsv( $output, [
+            __( 'ID', 'woo-offers' ),
+            __( 'Name', 'woo-offers' ),
+            __( 'Type', 'woo-offers' ),
+            __( 'Status', 'woo-offers' ),
+            __( 'Start Date', 'woo-offers' ),
+            __( 'End Date', 'woo-offers' ),
+            __( 'Target Products', 'woo-offers' ),
+            __( 'Configuration', 'woo-offers' ),
+            __( 'Created Date', 'woo-offers' ),
+            __( 'Updated Date', 'woo-offers' ),
+            __( 'Conversion Rate', 'woo-offers' ),
+            __( 'Total Revenue', 'woo-offers' ),
+            __( 'Total Conversions', 'woo-offers' )
+        ] );
+
+        // Add campaign data
+        foreach ( $campaigns as $campaign ) {
+            $configuration = is_array( $campaign['configuration'] ) ? 
+                             json_encode( $campaign['configuration'] ) : 
+                             $campaign['configuration'];
+
+            $products = [];
+            if ( ! empty( $campaign['targeting']['products'] ) ) {
+                foreach ( $campaign['targeting']['products'] as $product ) {
+                    $products[] = sprintf( '%s (ID: %d)', $product['name'], $product['id'] );
+                }
+            }
+
+            fputcsv( $output, [
+                $campaign['id'],
+                $campaign['name'],
+                $campaign['type'],
+                $campaign['status'],
+                $campaign['start_date'] ?: '',
+                $campaign['end_date'] ?: '',
+                implode( '; ', $products ),
+                $configuration,
+                $campaign['created_at'],
+                $campaign['updated_at'],
+                isset( $campaign['analytics']['conversion_rate'] ) ? $campaign['analytics']['conversion_rate'] . '%' : '',
+                isset( $campaign['analytics']['revenue'] ) ? wc_price( $campaign['analytics']['revenue'] ) : '',
+                $campaign['analytics']['conversions'] ?? ''
+            ] );
+        }
+
+        fclose( $output );
+
+        // Set headers for download and send file
+        header( 'Content-Type: text/csv; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+        header( 'Content-Length: ' . filesize( $file_path ) );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+
+        readfile( $file_path );
+        unlink( $file_path ); // Clean up temporary file
+        exit;
+    }
+
+    /**
+     * Export enhanced analytics data as CSV via AJAX
+     */
+    public function export_analytics_enhanced_ajax() {
+        // Verify nonce
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'woo_offers_nonce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security check failed', 'woo-offers' ) ] );
+        }
+
+        // Check permissions
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( [ 'message' => __( 'You do not have permission to export analytics', 'woo-offers' ) ] );
+        }
+
+        try {
+            $date_range = [
+                'start' => sanitize_text_field( $_POST['start_date'] ?? '' ),
+                'end' => sanitize_text_field( $_POST['end_date'] ?? '' ),
+                'days' => intval( $_POST['days'] ?? 30 )
+            ];
+
+            $format = sanitize_text_field( $_POST['format'] ?? 'csv' );
+            
+            if ( $format === 'excel' ) {
+                $filename = $this->generate_analytics_excel( $date_range );
+            } else {
+                $filename = $this->generate_analytics_csv( $date_range );
+            }
+
+            wp_send_json_success( [ 
+                'message' => __( 'Analytics data exported successfully', 'woo-offers' ),
+                'filename' => $filename,
+                'format' => $format
+            ] );
+        } catch ( Exception $e ) {
+            wp_send_json_error( [ 
+                'message' => sprintf( __( 'Export failed: %s', 'woo-offers' ), $e->getMessage() )
+            ] );
+        }
+    }
+
+    /**
+     * Generate enhanced analytics CSV file
+     */
+    private function generate_analytics_csv( $date_range ) {
+        $analytics = new \WooOffers\Admin\Analytics();
+        
+        // Get comprehensive analytics data
+        $overview_stats = $analytics->get_overview_stats( $date_range );
+        $chart_data = $analytics->get_chart_data( $date_range );
+        $top_offers = $analytics->get_top_offers( 50, $date_range );
+        $recent_activity = $analytics->get_recent_activity( 100 );
+
+        $filename = 'woo-offers-analytics-' . date( 'Y-m-d-H-i-s' ) . '.csv';
+        $file_path = wp_upload_dir()['basedir'] . '/' . $filename;
+
+        $output = fopen( $file_path, 'w' );
+        
+        // Add UTF-8 BOM for Excel compatibility
+        fwrite( $output, "\xEF\xBB\xBF" );
+
+        // Export Summary Section
+        fputcsv( $output, [ __( '=== ANALYTICS SUMMARY ===', 'woo-offers' ) ] );
+        fputcsv( $output, [ __( 'Report Generated', 'woo-offers' ), date( 'Y-m-d H:i:s' ) ] );
+        fputcsv( $output, [ __( 'Date Range', 'woo-offers' ), $date_range['start'] . ' to ' . $date_range['end'] ] );
+        fputcsv( $output, [ __( 'Total Views', 'woo-offers' ), number_format( $overview_stats['total_views'] ) ] );
+        fputcsv( $output, [ __( 'Total Conversions', 'woo-offers' ), number_format( $overview_stats['total_conversions'] ) ] );
+        fputcsv( $output, [ __( 'Conversion Rate', 'woo-offers' ), number_format( $overview_stats['conversion_rate'], 2 ) . '%' ] );
+        fputcsv( $output, [ __( 'Total Revenue', 'woo-offers' ), wc_price( $overview_stats['total_revenue'] ) ] );
+        fputcsv( $output, [] ); // Empty row
+
+        // Export Top Offers Section
+        fputcsv( $output, [ __( '=== TOP PERFORMING OFFERS ===', 'woo-offers' ) ] );
+        fputcsv( $output, [
+            __( 'Offer ID', 'woo-offers' ),
+            __( 'Offer Name', 'woo-offers' ),
+            __( 'Type', 'woo-offers' ),
+            __( 'Views', 'woo-offers' ),
+            __( 'Conversions', 'woo-offers' ),
+            __( 'Conversion Rate', 'woo-offers' ),
+            __( 'Revenue', 'woo-offers' )
+        ] );
+
+        foreach ( $top_offers as $offer ) {
+            fputcsv( $output, [
+                $offer->id,
+                $offer->name,
+                ucfirst( str_replace( '_', ' ', $offer->offer_type ) ),
+                number_format( $offer->total_views ),
+                number_format( $offer->conversions ),
+                number_format( $offer->conversion_rate, 2 ) . '%',
+                wc_price( $offer->revenue )
+            ] );
+        }
+
+        fputcsv( $output, [] ); // Empty row
+
+        // Export Recent Activity Section
+        fputcsv( $output, [ __( '=== RECENT ACTIVITY ===', 'woo-offers' ) ] );
+        fputcsv( $output, [
+            __( 'Date', 'woo-offers' ),
+            __( 'Time', 'woo-offers' ),
+            __( 'Event Type', 'woo-offers' ),
+            __( 'Offer Name', 'woo-offers' ),
+            __( 'Revenue', 'woo-offers' ),
+            __( 'User ID', 'woo-offers' ),
+            __( 'Session ID', 'woo-offers' )
+        ] );
+
+        foreach ( $recent_activity as $activity ) {
+            $datetime = explode( ' ', $activity->created_at );
+            fputcsv( $output, [
+                $datetime[0],
+                $datetime[1],
+                $activity->event_label,
+                $activity->offer_name,
+                $activity->revenue > 0 ? wc_price( $activity->revenue ) : '',
+                $activity->user_id ?: '',
+                substr( $activity->session_id, 0, 8 ) . '...'
+            ] );
+        }
+
+        fputcsv( $output, [] ); // Empty row
+
+        // Export Performance Data Section
+        if ( ! empty( $chart_data['performance'] ) ) {
+            fputcsv( $output, [ __( '=== DAILY PERFORMANCE DATA ===', 'woo-offers' ) ] );
+            fputcsv( $output, [
+                __( 'Date', 'woo-offers' ),
+                __( 'Views', 'woo-offers' ),
+                __( 'Conversions', 'woo-offers' ),
+                __( 'Revenue', 'woo-offers' )
+            ] );
+
+            foreach ( $chart_data['performance'] as $day_data ) {
+                fputcsv( $output, [
+                    $day_data['date'],
+                    $day_data['views'],
+                    $day_data['conversions'],
+                    wc_price( $day_data['revenue'] )
+                ] );
+            }
+        }
+
+        fclose( $output );
+
+        // Set headers and send file
+        header( 'Content-Type: text/csv; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+        header( 'Content-Length: ' . filesize( $file_path ) );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+
+        readfile( $file_path );
+        unlink( $file_path );
+        exit;
     }
 }

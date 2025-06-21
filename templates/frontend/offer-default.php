@@ -134,11 +134,11 @@ if ( ! empty( $styles ) ) {
             <ul class="offer-products-list">
                 <?php foreach ( $conditions['products'] as $offer_product ): ?>
                     <?php 
-                    $prod = wc_get_product( $offer_product['id'] );
+                    $prod = \wc_get_product( $offer_product['id'] );
                     if ( $prod ): 
                     ?>
                     <li class="offer-product-item">
-                        <span class="product-name"><?php echo esc_html( $prod->get_name() ); ?></span>
+                        <span class="product-name"><?php echo esc_html( $prod->get_name() ?: __( 'Product Name Not Available', 'woo-offers' ) ); ?></span>
                         <?php if ( ! empty( $offer_product['quantity'] ) && $offer_product['quantity'] > 1 ): ?>
                             <span class="product-quantity">(<?php echo intval( $offer_product['quantity'] ); ?>x)</span>
                         <?php endif; ?>

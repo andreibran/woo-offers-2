@@ -12,6 +12,27 @@ defined( 'ABSPATH' ) || exit;
 
 class CampaignManager {
     
+    /**
+     * Singleton instance
+     *
+     * @var CampaignManager|null
+     */
+    private static $instance = null;
+    
+    /**
+     * Campaign cache for performance optimization
+     *
+     * @var array
+     */
+    private static $campaign_cache = [];
+    
+    /**
+     * Query cache TTL in seconds
+     *
+     * @var int
+     */
+    const CACHE_TTL = 300; // 5 minutes
+    
     const CAMPAIGN_TYPES = [
         'product_upsell'    => 'Product Upsell',
         'cart_upsell'       => 'Cart Upsell', 
@@ -32,10 +53,66 @@ class CampaignManager {
     
     private static $tables = null;
     
+    /**
+     * ✅ ARCHITECTURE: Get singleton instance for better resource management
+     */
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    /**
+     * ✅ PERFORMANCE: Clear campaign cache
+     */
+    public static function clear_cache($campaign_id = null) {
+        if ($campaign_id) {
+            unset(self::$campaign_cache[$campaign_id]);
+            unset(self::$campaign_cache['stats_' . $campaign_id]);
+            wp_cache_delete("woo_campaign_{$campaign_id}", 'woo_offers');
+        } else {
+            self::$campaign_cache = [];
+            wp_cache_flush_group('woo_offers');
+        }
+    }
+    
+    /**
+     * ✅ PERFORMANCE: Get cached campaign data
+     */
+    private static function get_cached_campaign($campaign_id) {
+        // Check memory cache first
+        if (isset(self::$campaign_cache[$campaign_id])) {
+            return self::$campaign_cache[$campaign_id];
+        }
+        
+        // Check WordPress object cache
+        $cached = wp_cache_get("woo_campaign_{$campaign_id}", 'woo_offers');
+        if ($cached !== false) {
+            self::$campaign_cache[$campaign_id] = $cached;
+            return $cached;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * ✅ PERFORMANCE: Set cached campaign data
+     */
+    private static function set_cached_campaign($campaign_id, $campaign_data) {
+        self::$campaign_cache[$campaign_id] = $campaign_data;
+        wp_cache_set("woo_campaign_{$campaign_id}", $campaign_data, 'woo_offers', self::CACHE_TTL);
+    }
+    
     public static function init() {
         add_action( 'init', [ __CLASS__, 'setup_hooks' ] );
         add_action( 'wp_ajax_woo_offers_save_campaign', [ __CLASS__, 'ajax_save_campaign' ] );
         add_action( 'wp_ajax_woo_offers_delete_campaign', [ __CLASS__, 'ajax_delete_campaign' ] );
+        
+        // Campaign Builder AJAX endpoints
+        add_action( 'wp_ajax_woo_offers_save_builder_data', [ __CLASS__, 'ajax_save_builder_data' ] );
+        add_action( 'wp_ajax_woo_offers_load_builder_data', [ __CLASS__, 'ajax_load_builder_data' ] );
+        add_action( 'wp_ajax_woo_offers_create_campaign_from_builder', [ __CLASS__, 'ajax_create_campaign_from_builder' ] );
     }
     
     public static function setup_hooks() {
@@ -84,6 +161,9 @@ class CampaignManager {
                 'campaign_data' => $campaign_data
             ] );
             
+            // ✅ PERFORMANCE: Clear list caches after creation
+            wp_cache_delete('woo_campaigns_list', 'woo_offers');
+            
             do_action( 'woo_offers_campaign_created', $campaign_id, $campaign_data );
             
             return $campaign_id;
@@ -95,8 +175,13 @@ class CampaignManager {
     }
     
     public static function get_campaign( $campaign_id ) {
-        global $wpdb;
+        // ✅ PERFORMANCE: Check cache first
+        $cached_campaign = self::get_cached_campaign($campaign_id);
+        if ($cached_campaign !== false) {
+            return $cached_campaign;
+        }
         
+        global $wpdb;
         $tables = self::get_tables();
         
         $campaign = $wpdb->get_row( $wpdb->prepare(
@@ -106,6 +191,9 @@ class CampaignManager {
         
         if ( $campaign ) {
             $campaign = self::decode_campaign_json_fields( $campaign );
+            
+            // ✅ PERFORMANCE: Cache the result
+            self::set_cached_campaign($campaign_id, $campaign);
         }
         
         return $campaign;
@@ -320,6 +408,9 @@ class CampaignManager {
                 self::handle_status_change( $campaign_id, $old_status, $data['status'] );
             }
             
+            // ✅ PERFORMANCE: Clear cache after update
+            self::clear_cache($campaign_id);
+            
             self::log_campaign_event( $campaign_id, 'campaign_updated', [
                 'user_id' => get_current_user_id(),
                 'changes' => $update_data,
@@ -362,6 +453,10 @@ class CampaignManager {
             }
             
             error_log( "WooOffers: Campaign deleted - ID: $campaign_id, Name: {$campaign->name}, User: " . get_current_user_id() );
+            
+            // ✅ PERFORMANCE: Clear cache after deletion
+            self::clear_cache($campaign_id);
+            wp_cache_delete('woo_campaigns_list', 'woo_offers');
             
             do_action( 'woo_offers_campaign_deleted', $campaign_id, $campaign );
             
@@ -617,6 +712,534 @@ class CampaignManager {
             'unique_visitors' => (int) ($stats->unique_visitors ?? 0),
             'conversion_rate' => round( $conversion_rate, 2 ),
             'click_through_rate' => $stats && $stats->views > 0 ? round( ( $stats->clicks / $stats->views ) * 100, 2 ) : 0
+        ];
+    }
+    
+    /**
+     * ========================================
+     * CAMPAIGN BUILDER INTEGRATION METHODS
+     * ========================================
+     */
+    
+    /**
+     * Save Campaign Builder data
+     */
+    public static function save_builder_campaign( $campaign_id, $builder_data ) {
+        global $wpdb;
+        
+        try {
+            // Validate builder data structure
+            $validation = self::validate_builder_data( $builder_data );
+            if ( is_wp_error( $validation ) ) {
+                return $validation;
+            }
+            
+            // Get existing campaign
+            $campaign = self::get_campaign( $campaign_id );
+            if ( ! $campaign ) {
+                return new \WP_Error( 'not_found', __( 'Campaign not found.', 'woo-offers' ) );
+            }
+            
+            // Prepare builder data for storage
+            $update_data = [
+                'design_config' => wp_json_encode( $builder_data ),
+                'updated_at' => current_time( 'mysql' )
+            ];
+            
+            $tables = self::get_tables();
+            
+            $result = $wpdb->update( 
+                $tables['campaigns'], 
+                $update_data, 
+                [ 'id' => $campaign_id ],
+                null,
+                [ '%d' ]
+            );
+            
+            if ( false === $result ) {
+                error_log( 'WooOffers: Failed to save builder data - DB Error: ' . $wpdb->last_error );
+                return new \WP_Error( 'db_error', __( 'Failed to save campaign builder data.', 'woo-offers' ) );
+            }
+            
+            // Log the save event
+            self::log_campaign_event( $campaign_id, 'builder_saved', [
+                'user_id' => get_current_user_id(),
+                'builder_data_size' => strlen( wp_json_encode( $builder_data ) ),
+                'components_count' => count( $builder_data['content']['components'] ?? [] ),
+                'workflow_nodes_count' => count( $builder_data['workflow']['nodes'] ?? [] )
+            ] );
+            
+            do_action( 'woo_offers_builder_campaign_saved', $campaign_id, $builder_data );
+            
+            return true;
+            
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Builder save failed - ' . $e->getMessage() );
+            return new \WP_Error( 'save_failed', __( 'Failed to save campaign builder data.', 'woo-offers' ) );
+        }
+    }
+    
+    /**
+     * Load Campaign Builder data
+     */
+    public static function load_builder_campaign( $campaign_id ) {
+        $campaign = self::get_campaign( $campaign_id );
+        if ( ! $campaign ) {
+            return new \WP_Error( 'not_found', __( 'Campaign not found.', 'woo-offers' ) );
+        }
+        
+        // Extract builder data from design_config
+        $builder_data = [];
+        if ( ! empty( $campaign->design_config ) ) {
+            $builder_data = is_array( $campaign->design_config ) ? $campaign->design_config : [];
+        }
+        
+        // Ensure builder data has required structure
+        $builder_data = self::ensure_builder_data_structure( $builder_data );
+        
+        // Add campaign metadata
+        $builder_data['metadata'] = [
+            'campaign_id' => $campaign->id,
+            'campaign_name' => $campaign->name,
+            'campaign_type' => $campaign->type,
+            'campaign_status' => $campaign->status,
+            'last_modified' => $campaign->updated_at,
+            'created_by' => $campaign->created_by
+        ];
+        
+        return $builder_data;
+    }
+    
+    /**
+     * Validate Campaign Builder data structure
+     */
+    private static function validate_builder_data( $data ) {
+        $errors = [];
+        
+        // Check required top-level structure
+        $required_keys = [ 'content', 'workflow', 'settings' ];
+        foreach ( $required_keys as $key ) {
+            if ( ! isset( $data[ $key ] ) ) {
+                $errors[] = sprintf( __( 'Missing required field: %s', 'woo-offers' ), $key );
+            }
+        }
+        
+        // Validate content structure
+        if ( isset( $data['content'] ) ) {
+            if ( ! isset( $data['content']['components'] ) || ! is_array( $data['content']['components'] ) ) {
+                $errors[] = __( 'Content components must be an array.', 'woo-offers' );
+            }
+        }
+        
+        // Validate workflow structure
+        if ( isset( $data['workflow'] ) ) {
+            if ( ! isset( $data['workflow']['nodes'] ) || ! is_array( $data['workflow']['nodes'] ) ) {
+                $errors[] = __( 'Workflow nodes must be an array.', 'woo-offers' );
+            }
+            
+            if ( ! isset( $data['workflow']['connections'] ) || ! is_array( $data['workflow']['connections'] ) ) {
+                $errors[] = __( 'Workflow connections must be an array.', 'woo-offers' );
+            }
+        }
+        
+        // Validate settings structure
+        if ( isset( $data['settings'] ) ) {
+            if ( ! is_array( $data['settings'] ) ) {
+                $errors[] = __( 'Settings must be an object.', 'woo-offers' );
+            }
+        }
+        
+        if ( ! empty( $errors ) ) {
+            return new \WP_Error( 'validation_failed', implode( ' ', $errors ) );
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Ensure builder data has the complete required structure
+     */
+    private static function ensure_builder_data_structure( $data ) {
+        $default_structure = [
+            'content' => [
+                'components' => [],
+                'layout' => [
+                    'type' => 'single-column',
+                    'spacing' => 'default',
+                    'alignment' => 'center'
+                ],
+                'theme' => [
+                    'colors' => [
+                        'primary' => '#007cba',
+                        'secondary' => '#50575e', 
+                        'background' => '#ffffff',
+                        'text' => '#1e1e1e'
+                    ],
+                    'typography' => [
+                        'heading_font' => 'inherit',
+                        'body_font' => 'inherit',
+                        'font_sizes' => [
+                            'small' => '14px',
+                            'medium' => '16px',
+                            'large' => '20px',
+                            'xlarge' => '24px'
+                        ]
+                    ]
+                ]
+            ],
+            'workflow' => [
+                'nodes' => [],
+                'connections' => [],
+                'settings' => [
+                    'auto_start' => false,
+                    'trigger_events' => [],
+                    'execution_limit' => null
+                ]
+            ],
+            'settings' => [
+                'auto_save' => true,
+                'history_enabled' => true,
+                'version' => '3.0.0',
+                'last_auto_save' => null
+            ],
+            'history' => [
+                'current_index' => 0,
+                'max_entries' => 50,
+                'entries' => []
+            ]
+        ];
+        
+        return array_merge( $default_structure, $data );
+    }
+    
+    /**
+     * Create a new campaign from Campaign Builder
+     */
+    public static function create_campaign_from_builder( $builder_data, $campaign_meta ) {
+        try {
+            // Validate input data
+            $validation = self::validate_builder_data( $builder_data );
+            if ( is_wp_error( $validation ) ) {
+                return $validation;
+            }
+            
+            // Prepare campaign data
+            $campaign_data = [
+                'name' => $campaign_meta['name'] ?? __( 'Untitled Campaign', 'woo-offers' ),
+                'description' => $campaign_meta['description'] ?? '',
+                'type' => $campaign_meta['type'] ?? 'product_upsell',
+                'status' => $campaign_meta['status'] ?? 'draft',
+                'design_config' => $builder_data,
+                'priority' => $campaign_meta['priority'] ?? 10
+            ];
+            
+            // Add scheduling and targeting if provided
+            if ( ! empty( $campaign_meta['schedule_config'] ) ) {
+                $campaign_data['schedule_config'] = $campaign_meta['schedule_config'];
+                $campaign_data['start_date'] = $campaign_meta['start_date'] ?? null;
+                $campaign_data['end_date'] = $campaign_meta['end_date'] ?? null;
+            }
+            
+            if ( ! empty( $campaign_meta['targeting_rules'] ) ) {
+                $campaign_data['targeting_rules'] = $campaign_meta['targeting_rules'];
+            }
+            
+            if ( ! empty( $campaign_meta['settings'] ) ) {
+                $campaign_data['settings'] = $campaign_meta['settings'];
+            }
+            
+            // Create the campaign
+            $campaign_id = self::create_campaign( $campaign_data );
+            
+            if ( is_wp_error( $campaign_id ) ) {
+                return $campaign_id;
+            }
+            
+            // Log builder creation
+            self::log_campaign_event( $campaign_id, 'created_from_builder', [
+                'user_id' => get_current_user_id(),
+                'components_count' => count( $builder_data['content']['components'] ?? [] ),
+                'workflow_nodes_count' => count( $builder_data['workflow']['nodes'] ?? [] ),
+                'campaign_meta' => $campaign_meta
+            ] );
+            
+            do_action( 'woo_offers_campaign_created_from_builder', $campaign_id, $builder_data, $campaign_meta );
+            
+            return $campaign_id;
+            
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Create campaign from builder failed - ' . $e->getMessage() );
+            return new \WP_Error( 'creation_failed', __( 'Failed to create campaign from builder.', 'woo-offers' ) );
+        }
+    }
+    
+    /**
+     * Get campaign preview data for the builder
+     */
+    public static function get_campaign_preview_data( $campaign_id ) {
+        $campaign = self::get_campaign( $campaign_id );
+        if ( ! $campaign ) {
+            return new \WP_Error( 'not_found', __( 'Campaign not found.', 'woo-offers' ) );
+        }
+        
+        $preview_data = [
+            'campaign' => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'type' => $campaign->type,
+                'status' => $campaign->status
+            ],
+            'design_config' => $campaign->design_config ?? [],
+            'targeting_rules' => $campaign->targeting_rules ?? [],
+            'schedule_config' => $campaign->schedule_config ?? [],
+            'settings' => $campaign->settings ?? []
+        ];
+        
+        return $preview_data;
+    }
+    
+    /**
+     * AJAX: Save Campaign Builder data
+     */
+    public static function ajax_save_builder_data() {
+        try {
+            SecurityManager::verify_ajax_nonce( 'woo_offers_builder_save' );
+            SecurityManager::verify_capability( 'manage_woocommerce' );
+            
+            $campaign_id = (int) ($_POST['campaign_id'] ?? 0);
+            $builder_data = json_decode( stripslashes( $_POST['builder_data'] ?? '{}' ), true );
+            
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID.', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+            
+            if ( empty( $builder_data ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'No builder data provided.', 'woo-offers' ),
+                    'code' => 'NO_DATA'
+                ] );
+            }
+            
+            $result = self::save_builder_campaign( $campaign_id, $builder_data );
+            
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( [
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ] );
+            }
+            
+            wp_send_json_success( [
+                'message' => __( 'Campaign builder data saved successfully.', 'woo-offers' ),
+                'campaign_id' => $campaign_id,
+                'timestamp' => current_time( 'mysql' )
+            ] );
+            
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Save builder data AJAX failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to save builder data.', 'woo-offers' ),
+                'code' => 'SAVE_FAILED'
+            ] );
+        }
+    }
+    
+    /**
+     * AJAX: Load Campaign Builder data
+     */
+    public static function ajax_load_builder_data() {
+        try {
+            SecurityManager::verify_ajax_nonce( 'woo_offers_builder_load' );
+            SecurityManager::verify_capability( 'manage_woocommerce' );
+            
+            $campaign_id = (int) ($_POST['campaign_id'] ?? 0);
+            
+            if ( empty( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'Invalid campaign ID.', 'woo-offers' ),
+                    'code' => 'INVALID_ID'
+                ] );
+            }
+            
+            $builder_data = self::load_builder_campaign( $campaign_id );
+            
+            if ( is_wp_error( $builder_data ) ) {
+                wp_send_json_error( [
+                    'message' => $builder_data->get_error_message(),
+                    'code' => $builder_data->get_error_code()
+                ] );
+            }
+            
+            wp_send_json_success( [
+                'message' => __( 'Campaign builder data loaded successfully.', 'woo-offers' ),
+                'data' => $builder_data
+            ] );
+            
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Load builder data AJAX failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to load builder data.', 'woo-offers' ),
+                'code' => 'LOAD_FAILED'
+            ] );
+        }
+    }
+    
+    /**
+     * AJAX: Create campaign from builder
+     */
+    public static function ajax_create_campaign_from_builder() {
+        try {
+            SecurityManager::verify_ajax_nonce( 'woo_offers_builder_create' );
+            SecurityManager::verify_capability( 'manage_woocommerce' );
+            
+            $builder_data = json_decode( stripslashes( $_POST['builder_data'] ?? '{}' ), true );
+            $campaign_meta = json_decode( stripslashes( $_POST['campaign_meta'] ?? '{}' ), true );
+            
+            if ( empty( $builder_data ) ) {
+                wp_send_json_error( [
+                    'message' => __( 'No builder data provided.', 'woo-offers' ),
+                    'code' => 'NO_DATA'
+                ] );
+            }
+            
+            $campaign_id = self::create_campaign_from_builder( $builder_data, $campaign_meta );
+            
+            if ( is_wp_error( $campaign_id ) ) {
+                wp_send_json_error( [
+                    'message' => $campaign_id->get_error_message(),
+                    'code' => $campaign_id->get_error_code()
+                ] );
+            }
+            
+            wp_send_json_success( [
+                'message' => __( 'Campaign created successfully from builder.', 'woo-offers' ),
+                'campaign_id' => $campaign_id,
+                'redirect_url' => admin_url( 'admin.php?page=woo-offers&view=campaigns&campaign_id=' . $campaign_id )
+            ] );
+            
+        } catch ( \Exception $e ) {
+            error_log( 'WooOffers: Create from builder AJAX failed - ' . $e->getMessage() );
+            wp_send_json_error( [
+                'message' => __( 'Failed to create campaign from builder.', 'woo-offers' ),
+                'code' => 'CREATE_FAILED'
+            ] );
+        }
+    }
+    
+    /**
+     * Get the Campaign Builder JSON schema for validation
+     */
+    public static function get_builder_schema() {
+        return [
+            'type' => 'object',
+            'required' => [ 'content', 'workflow', 'settings' ],
+            'properties' => [
+                'content' => [
+                    'type' => 'object',
+                    'required' => [ 'components' ],
+                    'properties' => [
+                        'components' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'required' => [ 'id', 'type', 'position' ],
+                                'properties' => [
+                                    'id' => [ 'type' => 'string' ],
+                                    'type' => [ 
+                                        'type' => 'string',
+                                        'enum' => [ 'heading', 'text', 'button', 'image', 'video', 'spacer', 'divider', 'countdown', 'social' ]
+                                    ],
+                                    'position' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'x' => [ 'type' => 'number' ],
+                                            'y' => [ 'type' => 'number' ],
+                                            'width' => [ 'type' => 'number' ],
+                                            'height' => [ 'type' => 'number' ]
+                                        ]
+                                    ],
+                                    'properties' => [ 'type' => 'object' ],
+                                    'styles' => [ 'type' => 'object' ]
+                                ]
+                            ]
+                        ],
+                        'layout' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'type' => [ 'type' => 'string' ],
+                                'spacing' => [ 'type' => 'string' ],
+                                'alignment' => [ 'type' => 'string' ]
+                            ]
+                        ],
+                        'theme' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'colors' => [ 'type' => 'object' ],
+                                'typography' => [ 'type' => 'object' ]
+                            ]
+                        ]
+                    ]
+                ],
+                'workflow' => [
+                    'type' => 'object',
+                    'required' => [ 'nodes', 'connections' ],
+                    'properties' => [
+                        'nodes' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'required' => [ 'id', 'type', 'position' ],
+                                'properties' => [
+                                    'id' => [ 'type' => 'string' ],
+                                    'type' => [ 
+                                        'type' => 'string',
+                                        'enum' => [ 'start', 'action', 'condition', 'delay', 'end' ]
+                                    ],
+                                    'position' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'x' => [ 'type' => 'number' ],
+                                            'y' => [ 'type' => 'number' ]
+                                        ]
+                                    ],
+                                    'properties' => [ 'type' => 'object' ]
+                                ]
+                            ]
+                        ],
+                        'connections' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'required' => [ 'from', 'to' ],
+                                'properties' => [
+                                    'from' => [ 'type' => 'string' ],
+                                    'to' => [ 'type' => 'string' ],
+                                    'conditions' => [ 'type' => 'object' ]
+                                ]
+                            ]
+                        ],
+                        'settings' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'auto_start' => [ 'type' => 'boolean' ],
+                                'trigger_events' => [ 'type' => 'array' ],
+                                'execution_limit' => [ 'type' => [ 'number', 'null' ] ]
+                            ]
+                        ]
+                    ]
+                ],
+                'settings' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'auto_save' => [ 'type' => 'boolean' ],
+                        'history_enabled' => [ 'type' => 'boolean' ],
+                        'version' => [ 'type' => 'string' ]
+                    ]
+                ]
+            ]
         ];
     }
 } 

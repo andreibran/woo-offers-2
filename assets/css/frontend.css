@@ -1,7 +1,28 @@
+/**
+ * WooOffers Frontend Styles - ✅ COMPATIBILITY FIXED
+ * Updated to align with JavaScript selectors and provide missing offer display classes
+ * 
+ * @package WooOffers
+ * @since 3.0.0
+ */
+
 :root {
-    --bs-primary-color: #e92d3b;
+    --woo-offers-primary: #e92d3b;
+    --woo-offers-success: #22c55e;
+    --woo-offers-warning: #f59e0b;
+    --woo-offers-error: #ef4444;
+    --woo-offers-border: #ddd;
+    --woo-offers-text: #333;
+    --woo-offers-text-light: #555;
+    --woo-offers-radius: 10px;
+    --woo-offers-shadow: 0 2px 4px rgba(0,0,0,.2);
+    --woo-offers-transition: all 0.2s ease-in-out;
 }
 
+/* ✅ FIXED: Updated class names to match JavaScript expectations */
+
+/* Offer Grid Container */
+.woo-offers-container,
 .bs-offer-grid {
     display: flex;
     flex-direction: column;
@@ -10,42 +31,111 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 }
 
+/* Main Offer Card/Container */
+.woo-offer,
 .bs-offer-card {
     position: relative;
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1.2rem 1.5rem;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    border: 2px solid var(--woo-offers-border);
+    border-radius: var(--woo-offers-radius);
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: var(--woo-offers-transition);
+    background: #fff;
 }
 
+.woo-offer:hover,
 .bs-offer-card:hover {
     border-color: #ccc;
     transform: scale(1.02);
+    box-shadow: var(--woo-offers-shadow);
 }
 
+.woo-offer.is-active,
 .bs-offer-card.is-active {
-    border-color: var(--bs-primary-color);
+    border-color: var(--woo-offers-primary);
     background-color: rgba(233, 45, 59, 0.06);
     transform: scale(1.01);
 }
 
+/* ✅ NEW: Missing offer button classes that JavaScript expects */
+.woo-offer-button,
+.apply-percentage-discount,
+.apply-fixed-discount,
+.apply-bogo-offer,
+.apply-bundle-offer,
+.apply-quantity-discount,
+.apply-free-shipping {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    background: var(--woo-offers-primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--woo-offers-transition);
+    margin-top: 0.5rem;
+}
+
+.woo-offer-button:hover,
+.apply-percentage-discount:hover,
+.apply-fixed-discount:hover,
+.apply-bogo-offer:hover,
+.apply-bundle-offer:hover,
+.apply-quantity-discount:hover,
+.apply-free-shipping:hover {
+    background: #c91e2a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(233, 45, 59, 0.3);
+}
+
+.woo-offer-button:disabled,
+.apply-percentage-discount:disabled,
+.apply-fixed-discount:disabled,
+.apply-bogo-offer:disabled,
+.apply-bundle-offer:disabled,
+.apply-quantity-discount:disabled,
+.apply-free-shipping:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.woo-offer-button.loading,
+.apply-percentage-discount.loading,
+.apply-fixed-discount.loading,
+.apply-bogo-offer.loading,
+.apply-bundle-offer.loading,
+.apply-quantity-discount.loading,
+.apply-free-shipping.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Radio Button Styling */
+.woo-offer input[type="radio"],
 .bs-offer-card input[type="radio"] {
     appearance: none;
     -webkit-appearance: none;
     position: relative;
     width: 22px;
     height: 22px;
-    border: 2px solid var(--bs-primary-color);
+    border: 2px solid var(--woo-offers-primary);
     border-radius: 50%;
     flex-shrink: 0;
     cursor: pointer;
     margin: 0;
 }
 
+.woo-offer input[type="radio"]:checked::before,
 .bs-offer-card input[type="radio"]:checked::before {
     content: '';
     position: absolute;
@@ -55,62 +145,180 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--bs-primary-color);
+    background: var(--woo-offers-primary);
 }
 
+.woo-offer input[type="radio"]:focus,
 .bs-offer-card input[type="radio"]:focus {
     outline: none;
 }
 
+.woo-offer input[type="radio"]:focus-visible,
 .bs-offer-card input[type="radio"]:focus-visible {
-    outline: 2px solid var(--bs-primary-color);
+    outline: 2px solid var(--woo-offers-primary);
     outline-offset: 2px;
 }
 
-
+/* Offer Information */
+.woo-offer-info,
 .bs-offer-info {
     flex-grow: 1;
 }
 
+.woo-offer-info strong,
 .bs-offer-info strong {
     display: block;
-    color: #333;
+    color: var(--woo-offers-text);
     font-size: 1rem;
     font-weight: 600;
     margin-bottom: .25rem;
 }
 
+.woo-offer-info em,
 .bs-offer-info em {
     display: block;
-    color: #555;
+    color: var(--woo-offers-text-light);
     font-style: italic;
     font-size: .85rem;
 }
 
+/* Pricing Display */
+.woo-offer-total-price,
 .bs-offer-total-price {
-    color: var(--bs-primary-color);
+    color: var(--woo-offers-primary);
     font-size: 1.45rem;
     font-weight: 700;
 }
 
+/* Badge Styling */
+.woo-offer[data-badge]::before,
 .bs-offer-card[data-badge]::before {
     content: attr(data-badge);
     position: absolute;
     top: -10px;
     right: 10px;
-    background-color: var(--bs-primary-color);
+    background-color: var(--woo-offers-primary);
     color: #fff;
     padding: .2rem .5rem;
     border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+    box-shadow: var(--woo-offers-shadow);
     font-size: .7rem;
     font-weight: 700;
 }
 
-/* --- REGRA CORRIGIDA --- */
+/* Offer Labels */
+.woo-offer-label,
 .bs-offer-label {
     color: #007700;
     font-size: .75rem;
     font-weight: 500;
-    /* As propriedades de margem e display foram removidas para juntar ao título */
+}
+
+/* ✅ NEW: Message system for offer feedback */
+.woo-offers-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 300px;
+    padding: 15px 20px;
+    border-radius: 5px;
+    box-shadow: var(--woo-offers-shadow);
+    word-wrap: break-word;
+    animation: slideInRight 0.3s ease;
+}
+
+.woo-offers-message-success {
+    background: var(--woo-offers-success);
+    color: white;
+}
+
+.woo-offers-message-error {
+    background: var(--woo-offers-error);
+    color: white;
+}
+
+.woo-offers-message-warning {
+    background: var(--woo-offers-warning);
+    color: white;
+}
+
+.woo-offers-message-info {
+    background: #3b82f6;
+    color: white;
+}
+
+.message-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    float: right;
+    margin-left: 10px;
+    line-height: 1;
+}
+
+.message-close:hover {
+    opacity: 0.8;
+}
+
+/* ✅ NEW: Button text wrapper for loading states */
+.button-text {
+    display: inline;
+}
+
+/* ✅ NEW: Animation for messages */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ✅ NEW: Responsive design */
+@media (max-width: 768px) {
+    .woo-offers-container,
+    .bs-offer-grid {
+        margin: 15px 0;
+        gap: 0.75rem;
+    }
+    
+    .woo-offer,
+    .bs-offer-card {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+    
+    .woo-offers-message {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}
+
+/* ✅ NEW: Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .woo-offer,
+    .bs-offer-card {
+        background: #1f2937;
+        border-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .woo-offer-info strong,
+    .bs-offer-info strong {
+        color: #f9fafb;
+    }
+    
+    .woo-offer-info em,
+    .bs-offer-info em {
+        color: #d1d5db;
+    }
 }

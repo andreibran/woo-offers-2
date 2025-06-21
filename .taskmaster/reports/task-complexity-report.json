@@ -1,12 +1,12 @@
 {
 	"meta": {
-		"generatedAt": "2025-06-19T23:26:52.619Z",
-		"tasksAnalyzed": 10,
-		"totalTasks": 10,
-		"analysisCount": 31,
+		"generatedAt": "2025-06-20T22:27:48.123Z",
+		"tasksAnalyzed": 30,
+		"totalTasks": 30,
+		"analysisCount": 38,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
-		"usedResearch": false
+		"usedResearch": true
 	},
 	"complexityAnalysis": [
 		{
@@ -66,182 +66,6 @@
 			"reasoning": "This task involves creating a flexible template system with customization options for colors, typography, layouts, and responsive behavior. While complex, it's more straightforward than some other tasks as it primarily focuses on frontend implementation without complex business logic. The main challenges are ensuring cross-browser compatibility and responsive design."
 		},
 		{
-			"taskId": 8,
-			"taskTitle": "Develop rule-based targeting system",
-			"complexityScore": 8,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the rule-based targeting system into subtasks covering: 1) Customer data and segmentation engine, 2) Contextual data providers (geolocation, session, inventory), 3) Rule definition model and storage, 4) Rule evaluation engine implementation, and 5) Rule builder interface with testing tools. For each subtask, include data model design, algorithm details, and performance optimization strategies.",
-			"reasoning": "This task involves building a complex rule engine that can evaluate multiple conditions based on customer data, geolocation, time, inventory, and other factors. The complexity comes from designing a flexible rule schema, implementing efficient evaluation algorithms, and creating an intuitive builder interface while maintaining performance with potentially complex rule combinations."
-		},
-		{
-			"taskId": 9,
-			"taskTitle": "Implement A/B testing framework",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the A/B testing framework into subtasks covering: 1) Test creation interface and configuration, 2) Traffic splitting algorithm and user assignment, 3) Conversion tracking and data collection, 4) Statistical analysis and significance calculator, and 5) Results dashboard with visualizations. For each subtask, include statistical methods to be used, data storage requirements, and user experience considerations.",
-			"reasoning": "Implementing an A/B testing framework requires statistical knowledge for proper traffic splitting, conversion tracking, and significance calculation. The complexity involves ensuring consistent user experiences, implementing proper statistical methods, and creating intuitive visualizations of test results while maintaining data accuracy."
-		},
-		{
-			"taskId": 10,
-			"taskTitle": "Optimize performance and compatibility",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the performance and compatibility optimization into subtasks covering: 1) Asset optimization and caching system, 2) Database query optimization and indexing, 3) Frontend performance improvements, 4) Compatibility testing suite for themes and plugins, and 5) Error logging and documentation implementation. For each subtask, include specific optimization techniques, testing methodologies, and compatibility considerations.",
-			"reasoning": "This task involves optimizing the entire plugin across multiple dimensions: asset loading, database queries, frontend performance, and compatibility with other themes/plugins. The complexity comes from needing to understand and optimize all aspects of the plugin while ensuring it works correctly across different environments and with third-party code."
-		},
-		{
-			"taskId": 11,
-			"taskTitle": "Refactor Core Admin Structure",
-			"complexityScore": 8,
-			"recommendedSubtasks": 8,
-			"expansionPrompt": "Break down the refactoring of the Admin.php class into detailed subtasks, including removing React dependencies, implementing WordPress admin page callbacks, creating template files, setting up admin enqueue functions, implementing admin notices system, and ensuring proper testing at each stage.",
-			"reasoning": "This task involves a fundamental architectural change from React to WordPress native implementation, requiring deep understanding of both systems. It touches core functionality with multiple components and dependencies, and requires careful migration to prevent breaking changes."
-		},
-		{
-			"taskId": 12,
-			"taskTitle": "Implement WP_List_Table for Offers Management",
-			"complexityScore": 7,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "Create detailed subtasks for implementing a WP_List_Table for offers management, including class structure, data retrieval with pagination, filtering and search functionality, bulk actions, row actions, and integration with the admin interface.",
-			"reasoning": "Implementing WP_List_Table requires understanding WordPress core APIs and creating a robust data handling system. The complexity comes from implementing sorting, filtering, pagination, bulk actions, and ensuring proper integration with the database and admin interface."
-		},
-		{
-			"taskId": 13,
-			"taskTitle": "Create Offer Edit Form with Metaboxes",
-			"complexityScore": 8,
-			"recommendedSubtasks": 7,
-			"expansionPrompt": "Break down the creation of the offer editing interface into detailed subtasks, including form structure, metabox implementation for different sections, media integration, product selection with AJAX, validation, error handling, and preview functionality.",
-			"reasoning": "This task requires creating a complex form with multiple metaboxes, integrating WordPress media functionality, implementing AJAX for product selection, and ensuring proper validation and error handling. The form needs to replace a React-based implementation while maintaining all functionality."
-		},
-		{
-			"taskId": 14,
-			"taskTitle": "Implement Settings Pages Using WordPress Settings API",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Create detailed subtasks for implementing settings pages using the WordPress Settings API, including settings registration framework, field rendering, tabbed interface, advanced controls like color pickers, and settings validation/import/export functionality.",
-			"reasoning": "While the WordPress Settings API is well-documented, implementing a comprehensive settings system with tabs, validation, and advanced controls requires significant work. The complexity is moderate as it follows established WordPress patterns but needs careful implementation."
-		},
-		{
-			"taskId": 15,
-			"taskTitle": "Develop Analytics Dashboard with WordPress Admin Widgets",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the analytics dashboard development into detailed subtasks, including dashboard layout with widget containers, date range selection, Chart.js integration for visualizations, metrics tables implementation, and data export/refresh functionality.",
-			"reasoning": "Creating an analytics dashboard requires integrating Chart.js with WordPress, implementing date filtering, creating data retrieval systems, and ensuring proper visualization of complex data. The task combines frontend visualization with backend data processing."
-		},
-		{
-			"taskId": 16,
-			"taskTitle": "Refactor Frontend Offer Display and Interactions",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Create detailed subtasks for maintaining frontend offer display while ensuring compatibility with the refactored backend, including auditing existing JavaScript, updating AJAX handlers, preserving CSS styling, and maintaining analytics tracking.",
-			"reasoning": "This task focuses on maintaining existing functionality while ensuring compatibility with backend changes. The complexity comes from ensuring seamless operation during the transition, requiring careful testing and verification of all customer-facing features."
-		},
-		{
-			"taskId": 17,
-			"taskTitle": "Implement File Structure Refactoring",
-			"complexityScore": 5,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the file structure refactoring into detailed subtasks, including removing React components and build system, creating template directories, expanding PHP admin classes, implementing templates, and updating the autoloader and asset enqueueing.",
-			"reasoning": "While primarily organizational, this task requires careful planning to ensure all files are properly structured and referenced. The complexity comes from ensuring the new structure works correctly with WordPress and that all dependencies are properly managed."
-		},
-		{
-			"taskId": 18,
-			"taskTitle": "Create Import/Export Functionality",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Create detailed subtasks for implementing offer import/export functionality, including admin interface, CSV and JSON export implementation, import with field mapping, validation, and progress indicators with result reporting.",
-			"reasoning": "This task involves creating both UI and data processing components for importing and exporting offers. The complexity comes from handling different file formats, implementing field mapping, validating imported data, and providing progress feedback."
-		},
-		{
-			"taskId": 19,
-			"taskTitle": "Implement Help Documentation and Contextual Help",
-			"complexityScore": 4,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the help documentation implementation into detailed subtasks, including contextual help tabs, inline help text, comprehensive documentation page, interactive tooltips, and getting started guide with video placeholders.",
-			"reasoning": "This task is primarily content creation with some technical implementation. The complexity is lower as it doesn't involve complex logic but requires thorough documentation of all plugin features and integration with WordPress help systems."
-		},
-		{
-			"taskId": 20,
-			"taskTitle": "Comprehensive Testing and Performance Optimization",
-			"complexityScore": 9,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Create detailed subtasks for comprehensive testing and performance optimization, including testing matrix creation, database query optimization, asset loading optimization, load testing, and bug fixing with compatibility documentation.",
-			"reasoning": "This task requires systematic testing across multiple environments, identifying and resolving performance bottlenecks, and ensuring compatibility with various WordPress configurations. The high complexity comes from the breadth of testing required and the technical depth needed for effective optimization."
-		},
-		{
-			"taskId": 21,
-			"taskTitle": "Project Scaffolding and Dependency Removal",
-			"complexityScore": 2,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is atomic and well-defined. Expand into a detailed checklist of files to delete and directories to create based on the existing project structure.",
-			"reasoning": "This is a low-complexity task involving file system operations and minor code removal. It's a prerequisite for other work but doesn't involve algorithmic complexity or intricate system interactions. It is best handled as a single, focused effort."
-		},
-		{
-			"taskId": 22,
-			"taskTitle": "Establish Core Admin Pages and Menu Structure",
-			"complexityScore": 3,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is already well-expanded. Refine the existing subtasks by adding specific code snippets for each `add_menu_page` and `add_submenu_page` call, including the correct slugs and callback names.",
-			"reasoning": "This task uses well-known WordPress APIs. The complexity is low, mainly involving correct function calls and parameter configuration. The provided subtasks already break it down logically into manageable pieces."
-		},
-		{
-			"taskId": 23,
-			"taskTitle": "Implement WP_List_Table for Offers Management",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For each subtask, specify the exact methods of `WP_List_Table` to be implemented. For the `prepare_items` subtask, provide a skeleton SQL query that includes placeholders for sorting and pagination.",
-			"reasoning": "High complexity due to the intricacies of the `WP_List_Table` class. It involves custom database queries, handling state (sorting, pagination) via `$_REQUEST`, and correctly implementing multiple required methods, each with its own specific purpose."
-		},
-		{
-			"taskId": 24,
-			"taskTitle": "Create Offer Creation/Editing Form with Metaboxes",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For the 'Implement Metabox Callbacks' subtask, create a list of all required form fields and their corresponding HTML input types. For the 'Integrate Media Uploader' subtask, provide a skeleton JavaScript snippet for launching the media frame.",
-			"reasoning": "Moderate complexity. It involves coordinating multiple WordPress APIs (metaboxes, saving post meta, media uploader JS API). While each part is standard, integrating them correctly requires careful implementation and is well-suited to the existing subtask breakdown."
-		},
-		{
-			"taskId": 25,
-			"taskTitle": "Implement Offer Form Submission Handling",
-			"complexityScore": 5,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. Create a data map that lists every form field from Task 24 and specifies the exact PHP sanitization function (e.g., `sanitize_text_field`, `absint`, `wp_kses_post`) that must be used for it.",
-			"reasoning": "The complexity lies not in the algorithm but in the security-critical nature of the task. It requires careful implementation of security checks (nonce, caps) and choosing the correct sanitization function for every single piece of incoming data. The detailed subtasks are appropriate."
-		},
-		{
-			"taskId": 26,
-			"taskTitle": "Refactor Settings Page using WordPress Settings API",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For the 'Implement Tabbed Navigation' subtask, provide a skeleton HTML structure using `nav-tab-wrapper` and a skeleton JavaScript file for handling the tab switching logic.",
-			"reasoning": "High complexity due to the abstract nature of the Settings API and the need to combine it with a custom UI/JS for the tabbed interface. It requires a deep understanding of how WordPress builds admin pages, making the detailed subtask breakdown essential."
-		},
-		{
-			"taskId": 27,
-			"taskTitle": "Build Analytics Dashboard with WordPress Widgets",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For the 'Implement Data Fetching Logic' subtask, define the expected structure of the returned data array. For the 'Implement Detailed Table' subtask, specify the columns for the `WP_List_Table`.",
-			"reasoning": "Moderate complexity due to the integration of multiple distinct components: a custom admin page, the Dashboard Widget API, custom database queries, and a JavaScript-powered date filter. The existing subtasks correctly isolate these components."
-		},
-		{
-			"taskId": 28,
-			"taskTitle": "Integrate Chart.js for Analytics Visualization",
-			"complexityScore": 5,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For the 'Implement Backend Logic' subtask, define the exact JSON structure (labels, datasets) that the PHP function must produce for Chart.js to consume.",
-			"reasoning": "Moderate complexity. The core challenge is the data transformation and the communication between the PHP backend and the JavaScript frontend using `wp_localize_script`. The Chart.js part itself is standard library usage. The subtasks map this process perfectly."
-		},
-		{
-			"taskId": 29,
-			"taskTitle": "Implement Offer Preview Functionality via AJAX",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "The task is well-expanded. For the 'Process and Sanitize POST Data' subtask, list the top 5 most critical fields to sanitize and the function to use for each. For the 'Display the Returned HTML' subtask, provide a skeleton for the JavaScript AJAX success callback.",
-			"reasoning": "High complexity due to the full-stack nature of the task. It requires seamless coordination between frontend JavaScript (event handling, AJAX) and backend PHP (request handling, sanitization, template rendering with unsaved data), which the subtasks address sequentially."
-		},
-		{
 			"id": 30,
 			"taskTitle": "Simplify and Clean Up REST API Endpoints",
 			"complexityScore": 4,
@@ -250,12 +74,244 @@
 			"reasoning": "Low-to-moderate complexity. The primary challenge is the careful auditing and verification process to ensure no public-facing functionality is broken. The actual code modification is simple (deleting code), but the risk requires the methodical approach outlined in the subtasks."
 		},
 		{
-			"taskId": 30,
-			"taskTitle": "Simplify and Clean Up REST API Endpoints",
-			"complexityScore": 5,
+			"taskId": 8,
+			"taskTitle": "Setup Project Repository",
+			"complexityScore": 3,
 			"recommendedSubtasks": 3,
-			"expansionPrompt": "Break down this task with a focus on simplify and clean up rest api endpoints.",
-			"reasoning": "Automatically added due to missing analysis in AI response."
+			"expansionPrompt": "Break down the repository setup into subtasks such as initializing Git repository, setting up basic WordPress plugin structure, and configuring initial project settings and documentation.",
+			"reasoning": "Setting up a project repository with a basic WordPress plugin structure is a straightforward task with low complexity, involving standard initialization and configuration steps. However, it benefits from clear subtasks to ensure proper foundation and future scalability."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement Security Fixes for AJAX Handlers",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks covering interface testing, traffic splitting algorithm, conversion tracking, statistical analysis, and results dashboard development.",
+			"reasoning": "This task involves critical security improvements combined with implementing robust A/B testing features, requiring moderate complexity due to security considerations, data handling, and statistical computations."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Develop SecurityManager Class",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for asset optimization and caching, database query optimization, frontend performance improvements, compatibility testing, and error logging with documentation.",
+			"reasoning": "Developing a comprehensive security framework with performance optimizations and compatibility testing involves multiple complex components, requiring careful design and integration."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Design New Database Schema",
+			"complexityScore": 7,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand into subtasks including React dependency removal, WordPress admin page callbacks, template file creation, asset enqueueing, admin notices, campaign system refactoring, security fixes integration, and staged testing.",
+			"reasoning": "Designing a new database schema with extensive admin interface refactoring and security hardening is complex, involving multiple interdependent components and careful migration."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Implement CampaignManager Core Class",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down into subtasks for WP_List_Table subclass creation, data retrieval with pagination, filtering and search, bulk and row actions, admin interface integration, and security hardening.",
+			"reasoning": "Implementing core campaign management with admin UI and security considerations requires moderate complexity due to data handling, UI integration, and secure operations."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Create Campaign Creation Wizard",
+			"complexityScore": 6,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand into subtasks for offer form design, metabox implementation, media uploader integration, AJAX product selection, validation, preview functionality, and campaign system architecture with security.",
+			"reasoning": "Developing a multi-step wizard with rich UI components, AJAX interactions, and security integration involves moderate complexity and multiple detailed subtasks."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Implement Campaign Types",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for settings registration, field rendering, tabbed interface, validation with import/export, and security with campaign system architecture.",
+			"reasoning": "Implementing various campaign types with settings management and security requires moderate complexity, focusing on UI, data validation, and integration."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Develop Template Engine",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for dashboard layout design, date range component, Chart.js integration, metrics tables, and data export with refresh functionality.",
+			"reasoning": "Creating a template engine with dashboard and visualization components involves moderate complexity, primarily UI and data integration tasks."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Implement CacheManager for Performance Optimization",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks auditing JavaScript compatibility, updating AJAX handlers, verifying CSS styling, maintaining analytics tracking, and implementing security fixes with campaign system optimization.",
+			"reasoning": "Performance optimization with caching and security fixes across frontend and backend requires moderate complexity due to cross-cutting concerns and integration challenges."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Optimize Database Queries",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for React removal, template structure creation, PHP admin class expansion, template rendering functions, and autoloader with asset enqueueing updates.",
+			"reasoning": "Optimizing database queries alongside codebase refactoring and templating involves moderate complexity, requiring careful coordination of backend and frontend changes."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Implement AnalyticsManager",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for admin interface design, export functionality, import with validation, progress reporting, and security with campaign system review.",
+			"reasoning": "Developing a comprehensive analytics system with import/export and security auditing involves moderate complexity due to data processing and UI integration."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Create Analytics Dashboard",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for contextual help tabs, inline help text, documentation page, interactive tooltips, and getting started guide with video placeholders.",
+			"reasoning": "Creating an analytics dashboard with rich help and documentation features is moderately complex, focusing on UI enhancements and user guidance."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Develop A/B Testing Framework",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for testing matrix creation, database query optimization, asset loading optimization, load testing, and bug fixing with compatibility documentation.",
+			"reasoning": "Building a robust A/B testing framework with performance and compatibility considerations is complex, requiring thorough testing and optimization."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Implement Real-time Performance Monitoring",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for identifying files for deletion, deleting legacy files, creating new directory structure, implementing secure code templates, and updating configuration with documentation.",
+			"reasoning": "Implementing real-time monitoring with legacy cleanup and secure architecture setup involves moderate complexity due to system-wide impact and security focus."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Design Modern Admin Interface",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Expand into subtasks for responsive layout design, accessibility feature integration, and mobile-friendly UI implementation.",
+			"reasoning": "Designing a modern admin interface is moderately simple but benefits from clear subtasks focusing on responsiveness and accessibility."
+		},
+		{
+			"taskId": 23,
+			"taskTitle": "Implement Campaign Builder UX",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for custom list table creation, prepare_items implementation, column rendering, bulk actions with security, and search/filter functionality.",
+			"reasoning": "Developing a user-friendly campaign builder with complex UI components and security requires moderate complexity and detailed task breakdown."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "Implement JavaScript Framework",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for form field definition, metabox callback implementation, media uploader JS skeleton, secure data saving, and media uploader integration.",
+			"reasoning": "Implementing a JavaScript framework for UI components with secure data handling is moderately complex, involving frontend and backend coordination."
+		},
+		{
+			"taskId": 25,
+			"taskTitle": "Optimize Frontend Performance",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for form field inventory, sanitization mapping, PHP sanitization implementation, security checks, and documentation of sanitization and security architecture.",
+			"reasoning": "Optimizing frontend performance with detailed sanitization and security checks requires moderate complexity and thorough documentation."
+		},
+		{
+			"taskId": 26,
+			"taskTitle": "Conduct Comprehensive Testing",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for HTML structure creation, JavaScript tab logic, integration into admin page, security best practices, and campaign system architecture design.",
+			"reasoning": "Comprehensive testing with UI components and security considerations is moderately complex, requiring coordinated frontend and backend efforts."
+		},
+		{
+			"taskId": 27,
+			"taskTitle": "Develop User Documentation",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for data structure definition, data fetching logic, column specification, WP_List_Table implementation, and security with architecture review.",
+			"reasoning": "Developing user documentation is less complex but benefits from structured subtasks to ensure clarity and completeness."
+		},
+		{
+			"taskId": 28,
+			"taskTitle": "Implement Migration Strategy",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for JSON data structure design, PHP JSON generation, data localization to JS, Chart.js initialization, and security best practices review.",
+			"reasoning": "Implementing migration with data transformation and visualization integration involves moderate complexity focused on data handling and security."
+		},
+		{
+			"taskId": 29,
+			"taskTitle": "Perform Security Penetration Testing",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for identifying critical POST fields, implementing sanitization, backend processing, AJAX success callback, and frontend-backend integration.",
+			"reasoning": "Security penetration testing with sanitization and integration tasks is moderately complex due to security sensitivity and cross-layer coordination."
+		},
+		{
+			"taskId": 30,
+			"taskTitle": "Finalize Project Deployment",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down into subtasks for REST API endpoint naming audit, security enhancements, and campaign system architecture redesign.",
+			"reasoning": "Finalizing deployment with API and architecture refinements involves moderate complexity focused on security and system design."
+		},
+		{
+			"taskId": 31,
+			"taskTitle": "Monitor Post-Deployment Performance",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for performance monitoring setup, user feedback module, log management, incident alerting, and reporting process creation.",
+			"reasoning": "Post-deployment monitoring with feedback and incident management is moderately complex due to integration of multiple monitoring and alerting systems."
+		},
+		{
+			"taskId": 32,
+			"taskTitle": "Gather User Feedback and Iterate",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for feedback widget implementation, backend processing, feedback analysis, iteration workflow integration, and security with campaign system architecture.",
+			"reasoning": "User feedback collection and iteration involves moderate complexity with focus on secure data handling and integration into development workflows."
+		},
+		{
+			"taskId": 33,
+			"taskTitle": "Plan Future Enhancements",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for security audit, modular architecture definition, enhancement framework development, roadmap planning, and integration of fixes and modular changes.",
+			"reasoning": "Planning future enhancements with security and modularity focus is moderately complex, requiring strategic design and documentation."
+		},
+		{
+			"taskId": 34,
+			"taskTitle": "Document Lessons Learned",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for data gathering, security fix analysis, architectural insights, report compilation, and distribution.",
+			"reasoning": "Documenting lessons learned is less complex but requires thorough collection and synthesis of development and security information."
+		},
+		{
+			"taskId": 35,
+			"taskTitle": "Evaluate Success Metrics",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail subtasks for defining technical metrics, UX metrics collection, business metrics framework, metrics dashboard integration, and security review.",
+			"reasoning": "Evaluating success metrics involves moderate complexity due to diverse metric types and security considerations in data handling."
+		},
+		{
+			"taskId": 36,
+			"taskTitle": "Review and Refine Documentation",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into subtasks for review criteria definition, initial author review, peer review, feedback incorporation, and final verification.",
+			"reasoning": "Documentation review and refinement is relatively low complexity but requires structured process and multiple review stages."
+		},
+		{
+			"taskId": 37,
+			"taskTitle": "Final Project Review",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand into subtasks for architecture validation, security audit, personalization verification, content consistency check, and final integration testing.",
+			"reasoning": "Final project review is moderately complex due to comprehensive coverage of architecture, security, content, and integration testing."
 		}
 	]
 }

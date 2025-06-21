@@ -1,3 +1,8 @@
+# ===========================================
+# Woo Offers v3.0 WordPress Plugin
+# Enhanced .gitignore for WordPress Development
+# ===========================================
+
 # Logs
 logs
 *.log
@@ -6,20 +11,209 @@ yarn-debug.log*
 yarn-error.log*
 dev-debug.log
 
-# Dependency directories
+# WordPress Core
+# (Don't commit WordPress core files if testing locally)
+/wp-admin/
+/wp-includes/
+/wp-content/
+wp-*.php
+xmlrpc.php
+.htaccess
+
+# WordPress Config
+wp-config.php
+wp-config-local.php
+wp-config-sample.php
+
+# WordPress Debug Logs
+/wp-content/debug.log
+error_log
+
+# Plugin Development
+# ===================
+
+# Composer Dependencies
+/vendor/
+composer.lock
+
+# Node Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
 
-# Environment variables
+# Build Output
+/build/
+/dist/
+*.min.js
+*.min.css
+
+# Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Editor directories and files
-.idea
-.vscode
+# WordPress Plugin Testing
+# =========================
+
+# WordPress Unit Tests
+/tmp/
+/tests/bin/
+/tests/data/
+phpunit.xml
+.phpunit.result.cache
+
+# WP-CLI
+wp-cli.local.yml
+wp-cli.yml
+
+# Database Exports
+*.sql
+*.sql.gz
+
+# IDE and Editor Files
+# ====================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PhpStorm / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Other Editors
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# OS specific
+# Operating System Files
+# ======================
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Development Tools
+# =================
+
+# PHP Tools
+/.phpcs.xml
+.php_cs.cache
+.phpunit.result.cache
+
+# Code Coverage
+/coverage/
+*.coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Security
+# ========
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+*.temp
+
+# Archive files
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Keys and certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+
+# Plugin Specific
+# ===============
+
+# Woo Offers specific ignores
+/assets/compiled/
+/assets/cache/
+*.asset.php
+
+# Task Master files (if using)
+.taskmaster/cache/
+.taskmaster/temp/
+
+# Plugin ZIP builds
+woo-offers*.zip
+
+# Translation files (if auto-generated)
+/languages/*.mo
+/languages/*.po~
+
+# Optimization files
+.htaccess.bak
+robots.txt.bak

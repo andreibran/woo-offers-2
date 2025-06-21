@@ -5,15 +5,26 @@ alwaysApply: false
 ---
 # WooCommerce Integration Guidelines
 
-## **Plugin Dependencies**
+**🔗 Official Documentation**: Always reference [WooCommerce Developer Documentation](mdc:https:/woocommerce.github.io) for latest APIs and best practices.
+
+**📚 Key Resources:**
+- **[WooCommerce Code Reference](mdc:https:/woocommerce.github.io)** - Complete API reference
+- **[WooCommerce Storybook](mdc:https:/woocommerce.github.io)** - UI components
+- **[Contribution Guidelines](mdc:https:/woocommerce.github.io)** - Development standards
+- **[WooCommerce Monorepo](mdc:https:/woocommerce.github.io)** - Core development
+
+---
+
+## **Plugin Dependencies & Compatibility**
 - **Minimum WooCommerce:** 4.0
-- **Tested up to:** 8.9
+- **Tested up to:** 8.9+  
 - **Required Check:** Verify WooCommerce is active before plugin initialization
 - **Version Check:** Compare against `WC()->version`
+- **🚨 CRITICAL:** Always use global namespace for WC functions: `\wc_get_product()`
 
-## **WooCommerce Integration Patterns**
+## **Core Integration Patterns**
 
-### **✅ DO: Proper WooCommerce Checks**
+### **✅ DO: Proper WooCommerce Initialization Checks**
 ```php
 // Check if WooCommerce is active
 if ( ! class_exists( 'WooCommerce' ) ) {
@@ -24,40 +35,95 @@ if ( ! class_exists( 'WooCommerce' ) ) {
     return;
 }
 
-// Check WooCommerce version
+// Check WooCommerce version compatibility
 if ( version_compare( WC()->version, WOO_OFFERS_MIN_WC, '<' ) ) {
-    // Show version error
+    add_action( 'admin_notices', function() {
+        $message = sprintf( 
+            __( 'Woo Offers requires WooCommerce %s or higher. Current version: %s', 'woo-offers' ),
+            WOO_OFFERS_MIN_WC,
+            WC()->version
+        );
+        printf( '<div class="notice notice-error"><p>%s</p></div>', $message );
+    });
+    return;
+}
+
+// 🚨 CRITICAL: Check function availability before use
+if ( ! function_exists( 'wc_get_product' ) || ! function_exists( 'wc_get_product_type_name' ) ) {
+    error_log( 'WooCommerce functions not available during plugin execution' );
+    return;
 }
 ```
 
-### **✅ DO: Use WooCommerce Hooks and Filters**
+### **✅ DO: Safe Function Calls with Global Namespace**
 ```php
-// Product page hooks
+// 🚨 ALWAYS use global namespace to prevent "function not found" errors
+$product = \wc_get_product( $product_id );
+if ( ! $product || ! $product->exists() ) {
+    return new WP_Error( 'invalid_product', __( 'Product not found', 'woo-offers' ) );
+}
+
+// ✅ Null-safe data retrieval with fallbacks
+$product_data = [
+    'id' => $product->get_id(),
+    'name' => $product->get_name() ?: '',
+    'sku' => $product->get_sku() ?: '',
+    'price' => $product->get_price_html() ?: __( 'Price not available', 'woo-offers' ),
+    'type' => \wc_get_product_type_name( $product->get_type() ) ?: __( 'Unknown', 'woo-offers' ),
+    'image' => $product->get_image( 'thumbnail' ) ?: '',
+    'status' => $product->get_status() ?: 'publish',
+    'stock_status' => $product->get_stock_status() ?: 'instock'
+];
+
+// ✅ Type checking with modern patterns
+if ( $product->is_type( 'variable' ) ) {
+    // Handle variable product
+    $variations = $product->get_available_variations();
+} elseif ( $product->is_type( 'grouped' ) ) {
+    // Handle grouped product
+    $children = $product->get_children();
+}
+```
+
+### **✅ DO: Modern Hook Implementation**
+```php
+// Product page hooks with proper priorities (WordPress 6.0+ compatible)
 add_action( 'woocommerce_single_product_summary', [$this, 'display_offer'], 25 );
 add_action( 'woocommerce_before_add_to_cart_form', [$this, 'display_offer'] );
 add_action( 'woocommerce_after_add_to_cart_form', [$this, 'display_offer'] );
 
-// Cart hooks
-add_action( 'woocommerce_before_cart_table', [$this, 'display_cart_offer'] );
-add_action( 'woocommerce_cart_calculate_fees', [$this, 'apply_cart_discount'] );
+// Cart hooks with proper priority ordering
+add_action( 'woocommerce_before_cart_table', [$this, 'display_cart_offer'], 10 );
+add_action( 'woocommerce_cart_calculate_fees', [$this, 'apply_cart_discount'], 20 );
 
 // Checkout hooks
 add_action( 'woocommerce_review_order_before_payment', [$this, 'display_checkout_offer'] );
+
+// Order completion hooks
+add_action( 'woocommerce_thankyou', [$this, 'track_offer_usage'], 10 );
 ```
 
-### **✅ DO: Proper Cart Integration**
+### **✅ DO: Error-Resistant Cart Integration**
 ```php
 namespace WooOffers\Offers;
 
 class CartIntegration {
     
     public static function init() {
-        add_action( 'woocommerce_cart_calculate_fees', [__CLASS__, 'apply_offers'] );
+        // Use appropriate hook priorities
+        add_action( 'woocommerce_cart_calculate_fees', [__CLASS__, 'apply_offers'], 20 );
         add_action( 'woocommerce_before_cart', [__CLASS__, 'display_cart_offers'] );
+        add_action( 'woocommerce_cart_loaded_from_session', [__CLASS__, 'validate_cart_offers'] );
     }
     
     public static function apply_offers() {
+        // Multiple safety checks following WC best practices
         if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+            return;
+        }
+        
+        if ( ! function_exists( 'WC' ) ) {
+            error_log( 'WooCommerce not available in apply_offers' );
             return;
         }
         
@@ -66,52 +132,118 @@ class CartIntegration {
             return;
         }
         
-        // Apply offer logic
-        $offers = self::get_applicable_offers();
-        foreach ( $offers as $offer ) {
-            self::apply_offer_to_cart( $offer, $cart );
+        try {
+            // Apply offer logic with modern error handling
+            $offers = self::get_applicable_offers();
+            foreach ( $offers as $offer ) {
+                self::apply_offer_to_cart( $offer, $cart );
+            }
+        } catch ( Exception $e ) {
+            error_log( 'WooOffers Cart Integration Error: ' . $e->getMessage() );
+            // Graceful degradation - don't break the cart
+        }
+    }
+    
+    public static function validate_cart_offers() {
+        // Ensure offers are still valid when cart loads from session
+        if ( ! WC()->cart ) {
+            return;
+        }
+        
+        // Remove invalid offers
+        $fees = WC()->cart->get_fees();
+        foreach ( $fees as $fee_key => $fee ) {
+            if ( strpos( $fee->name, 'woo_offers_' ) === 0 ) {
+                // Validate fee is still applicable
+                if ( ! self::is_offer_still_valid( $fee ) ) {
+                    WC()->cart->remove_fee( $fee_key );
+                }
+            }
         }
     }
 }
 ```
 
-### **✅ DO: Product Data Integration**
+## **AJAX & Admin Integration**
+
+### **✅ DO: Robust AJAX Product Search**
 ```php
-// Get product safely
-$product = wc_get_product( $product_id );
-if ( ! $product || ! $product->exists() ) {
-    return false;
-}
+public function search_products_ajax() {
+    try {
+        check_ajax_referer( 'woo_offers_nonce', 'nonce' );
 
-// Check product type
-if ( $product->is_type( 'variable' ) ) {
-    // Handle variable product
-} elseif ( $product->is_type( 'grouped' ) ) {
-    // Handle grouped product
-}
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'woo-offers' ) );
+        }
 
-// Get product price
-$price = $product->get_price();
-$regular_price = $product->get_regular_price();
-$sale_price = $product->get_sale_price();
+        // 🚨 CRITICAL: Check WooCommerce availability
+        if ( ! function_exists( 'wc_get_product' ) || ! function_exists( 'wc_get_product_type_name' ) ) {
+            wp_send_json_error( __( 'WooCommerce is not properly loaded. Please try again.', 'woo-offers' ) );
+        }
+
+        $query = sanitize_text_field( $_POST['query'] ?? '' );
+        
+        if ( empty( $query ) || strlen( $query ) < 2 ) {
+            wp_send_json_error( __( 'Search query too short.', 'woo-offers' ) );
+        }
+
+        $products = [];
+
+        // Modern product query using WC API
+        $product_ids = \wc_get_products([
+            'status' => 'publish',
+            'limit' => 20,
+            's' => $query,
+            'return' => 'ids'
+        ]);
+        
+        foreach ( $product_ids as $product_id ) {
+            $product = \wc_get_product( $product_id );
+            
+            if ( ! $product || ! $product->exists() ) {
+                continue;
+            }
+
+            $products[] = [
+                'id' => $product->get_id(),
+                'name' => $product->get_name() ?: '',
+                'sku' => $product->get_sku() ?: '',
+                'price' => $product->get_price_html() ?: __( 'Price not available', 'woo-offers' ),
+                'type' => \wc_get_product_type_name( $product->get_type() ) ?: __( 'Unknown', 'woo-offers' ),
+                'image' => $product->get_image( 'thumbnail' ) ?: '',
+                'status' => $product->get_status() ?: 'publish',
+                'stock_status' => $product->get_stock_status() ?: 'instock'
+            ];
+        }
+
+        wp_send_json_success( $products );
+        
+    } catch ( Exception $e ) {
+        error_log( 'WooOffers: Error in search_products_ajax: ' . $e->getMessage() );
+        wp_send_json_error( __( 'An error occurred while searching products. Please try again.', 'woo-offers' ) );
+    }
+}
 ```
-
-## **Admin Integration**
 
 ### **✅ DO: Proper Capability Checks**
 ```php
-// Use WooCommerce capabilities
+// Use WooCommerce-specific capabilities
 if ( ! current_user_can( 'manage_woocommerce' ) ) {
     wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 }
 
-// Or for shop managers
+// For shop managers
 if ( ! current_user_can( 'manage_product_terms' ) ) {
+    return;
+}
+
+// For viewing orders
+if ( ! current_user_can( 'edit_shop_orders' ) ) {
     return;
 }
 ```
 
-### **✅ DO: WooCommerce Admin Styling**
+### **✅ DO: WooCommerce Admin Styling Integration**
 ```php
 public function enqueue_admin_scripts( $hook ) {
     // Only on WooCommerce pages and our pages
@@ -119,51 +251,26 @@ public function enqueue_admin_scripts( $hook ) {
         return;
     }
     
-    // Enqueue WooCommerce admin styles
+    // Enqueue WooCommerce admin styles for consistency
     wp_enqueue_style( 'woocommerce_admin_styles' );
+    wp_enqueue_script( 'woocommerce_admin' );
     
-    // Our custom styles
-    wp_enqueue_style( 'woo-offers-admin', /* ... */ );
-}
-```
-
-### **✅ DO: Product Search Integration**
-```php
-public function search_products_ajax() {
-    check_ajax_referer( 'woo_offers_nonce', 'nonce' );
-    
-    $term = sanitize_text_field( $_POST['term'] ?? '' );
-    $results = [];
-    
-    if ( $term ) {
-        $products = wc_get_products([
-            'status' => 'publish',
-            'limit' => 20,
-            's' => $term,
-            'return' => 'ids'
-        ]);
-        
-        foreach ( $products as $product_id ) {
-            $product = wc_get_product( $product_id );
-            if ( $product ) {
-                $results[] = [
-                    'id' => $product_id,
-                    'text' => $product->get_formatted_name(),
-                    'price' => $product->get_price_html()
-                ];
-            }
-        }
-    }
-    
-    wp_send_json_success( $results );
+    // Our custom styles that extend WC styling
+    wp_enqueue_style( 
+        'woo-offers-admin', 
+        WOO_OFFERS_PLUGIN_URL . 'assets/css/admin.css',
+        ['woocommerce_admin_styles'], // Dependency on WC styles
+        WOO_OFFERS_VERSION
+    );
 }
 ```
 
 ## **Frontend Integration**
 
-### **✅ DO: Conditional Loading**
+### **✅ DO: Conditional Loading & Performance**
 ```php
 private function should_load_frontend_assets() {
+    // Only load on WooCommerce-related pages
     return is_woocommerce() || 
            is_cart() || 
            is_checkout() || 
@@ -171,100 +278,296 @@ private function should_load_frontend_assets() {
            is_shop() ||
            is_product_category() ||
            is_product_tag() ||
-           is_product();
+           is_product() ||
+           has_shortcode( get_post()->post_content ?? '', 'woo_offers' );
+}
+
+public function enqueue_frontend_assets() {
+    if ( ! $this->should_load_frontend_assets() ) {
+        return;
+    }
+    
+    // Load WooCommerce-compatible assets
+    wp_enqueue_style( 
+        'woo-offers-frontend',
+        WOO_OFFERS_PLUGIN_URL . 'assets/css/frontend.css',
+        ['woocommerce-general'], // Depend on WC styles
+        WOO_OFFERS_VERSION
+    );
+    
+    wp_enqueue_script(
+        'woo-offers-frontend',
+        WOO_OFFERS_PLUGIN_URL . 'assets/js/frontend.js',
+        ['jquery', 'wc-cart-fragments'], // Use WC dependencies
+        WOO_OFFERS_VERSION,
+        true
+    );
 }
 ```
 
 ### **✅ DO: Template Override System**
 ```php
-// Allow theme to override templates
-$template_name = 'woo-offers/offer-box.php';
-$template_path = 'woocommerce/';
-$default_path = WOO_OFFERS_PLUGIN_PATH . 'templates/';
+// Allow theme to override templates following WC pattern
+public function load_template( $template_name, $args = [] ) {
+    $template_name = 'woo-offers/' . $template_name;
+    $template_path = 'woocommerce/';
+    $default_path = WOO_OFFERS_PLUGIN_PATH . 'templates/';
 
-$template = wc_locate_template( $template_name, $template_path, $default_path );
+    // Use WooCommerce template locator
+    $template = \wc_locate_template( $template_name, $template_path, $default_path );
 
-if ( $template ) {
+    if ( ! $template ) {
+        return;
+    }
+
+    // Extract variables for template
+    if ( ! empty( $args ) && is_array( $args ) ) {
+        extract( $args ); // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+    }
+
     include $template;
 }
 ```
 
 ## **Database Integration**
 
-### **✅ DO: Use WooCommerce Tables When Appropriate**
+### **✅ DO: Use WooCommerce Meta Systems**
 ```php
-global $wpdb;
-
-// Use WooCommerce order item meta
-$wpdb->insert(
-    $wpdb->prefix . 'woocommerce_order_itemmeta',
-    [
-        'order_item_id' => $item_id,
-        'meta_key' => '_woo_offers_discount',
-        'meta_value' => $discount_amount
-    ]
-);
-
-// Or use WooCommerce meta functions
-wc_add_order_item_meta( $item_id, '_woo_offers_discount', $discount_amount );
-```
-
-### **✅ DO: Order Meta Integration**
-```php
-// Add offer data to order
+// Order meta integration
 add_action( 'woocommerce_checkout_create_order_line_item', function( $item, $cart_item_key, $values, $order ) {
     if ( isset( $values['woo_offers_data'] ) ) {
-        $item->add_meta_data( '_woo_offers_data', $values['woo_offers_data'] );
+        $item->add_meta_data( '_woo_offers_data', $values['woo_offers_data'], true );
+        $item->add_meta_data( '_woo_offers_original_price', $values['original_price'] ?? '', true );
     }
 }, 10, 4 );
 
-// Display in admin order
+// Display in admin order with proper formatting
 add_action( 'woocommerce_after_order_itemmeta', function( $item_id, $item, $product ) {
-    $offer_data = wc_get_order_item_meta( $item_id, '_woo_offers_data' );
+    $offer_data = \wc_get_order_item_meta( $item_id, '_woo_offers_data', true );
     if ( $offer_data ) {
-        echo '<p><strong>' . __( 'Offer Applied:', 'woo-offers' ) . '</strong> ' . esc_html( $offer_data['title'] ) . '</p>';
+        printf(
+            '<p><strong>%s</strong> %s</p>',
+            __( 'Offer Applied:', 'woo-offers' ),
+            esc_html( $offer_data['title'] ?? __( 'Unknown Offer', 'woo-offers' ) )
+        );
     }
 }, 10, 3 );
+
+// Customer order display
+add_action( 'woocommerce_order_item_meta_end', function( $item_id, $item, $order, $plain_text ) {
+    $offer_data = \wc_get_order_item_meta( $item_id, '_woo_offers_data', true );
+    if ( $offer_data && ! $plain_text ) {
+        printf(
+            '<small class="woo-offers-meta">%s: %s</small>',
+            __( 'Special Offer', 'woo-offers' ),
+            esc_html( $offer_data['title'] ?? '' )
+        );
+    }
+}, 10, 4 );
+```
+
+### **✅ DO: Safe Database Operations**
+```php
+// Use WooCommerce database methods when possible
+class OfferRepository {
+    
+    public static function save_offer_usage( $offer_id, $order_id, $amount ) {
+        global $wpdb;
+        
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'woo_offers_usage',
+            [
+                'offer_id' => absint( $offer_id ),
+                'order_id' => absint( $order_id ),
+                'discount_amount' => floatval( $amount ),
+                'created_at' => current_time( 'mysql' )
+            ],
+            ['%d', '%d', '%f', '%s']
+        );
+        
+        if ( $result === false ) {
+            error_log( 'Failed to save offer usage: ' . $wpdb->last_error );
+            return false;
+        }
+        
+        return $wpdb->insert_id;
+    }
+    
+    public static function get_product_offers( $product_id ) {
+        // Always validate product exists
+        $product = \wc_get_product( $product_id );
+        if ( ! $product || ! $product->exists() ) {
+            return [];
+        }
+        
+        // Use prepared statements
+        global $wpdb;
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}woo_offers 
+             WHERE status = 'active' 
+             AND (start_date IS NULL OR start_date <= %s)
+             AND (end_date IS NULL OR end_date >= %s)
+             ORDER BY priority DESC, created_at ASC",
+            current_time( 'mysql' ),
+            current_time( 'mysql' )
+        ) );
+    }
+}
 ```
 
 ## **Security and Validation**
 
-### **✅ DO: Validate WooCommerce Context**
+### **✅ DO: Comprehensive Context Validation**
 ```php
-// Always check if in WooCommerce context
-if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-    return;
+// Always check WooCommerce context before operations
+public function validate_woocommerce_context() {
+    // Check if WooCommerce is loaded
+    if ( ! function_exists( 'WC' ) ) {
+        return new WP_Error( 'wc_not_loaded', __( 'WooCommerce is not loaded', 'woo-offers' ) );
+    }
+    
+    // Check if cart is available when needed
+    if ( ! WC()->cart ) {
+        return new WP_Error( 'wc_cart_unavailable', __( 'WooCommerce cart is not available', 'woo-offers' ) );
+    }
+    
+    return true;
 }
 
-// Check if cart is available
-if ( ! WC()->cart || WC()->cart->is_empty() ) {
-    return;
-}
-
-// Validate product exists
-$product = wc_get_product( $product_id );
-if ( ! $product || ! $product->exists() ) {
-    return new WP_Error( 'invalid_product', __( 'Product not found', 'woo-offers' ) );
+// Validate product with comprehensive checks
+public function validate_product( $product_id ) {
+    if ( ! is_numeric( $product_id ) || $product_id <= 0 ) {
+        return new WP_Error( 'invalid_product_id', __( 'Invalid product ID', 'woo-offers' ) );
+    }
+    
+    $product = \wc_get_product( $product_id );
+    if ( ! $product || ! $product->exists() ) {
+        return new WP_Error( 'product_not_found', __( 'Product not found', 'woo-offers' ) );
+    }
+    
+    if ( $product->get_status() !== 'publish' ) {
+        return new WP_Error( 'product_not_published', __( 'Product is not published', 'woo-offers' ) );
+    }
+    
+    return $product;
 }
 ```
 
-### **❌ DON'T: Direct Database Access**
+### **❌ DON'T: Common Anti-Patterns**
 ```php
-// Don't access WooCommerce tables directly without checks
+// ❌ DON'T: Direct database access without WC functions
 $results = $wpdb->get_results( "SELECT * FROM {$wpdb->posts} WHERE post_type = 'product'" );
 
-// Use WooCommerce functions instead
-$products = wc_get_products(['status' => 'publish']);
+// ✅ DO: Use WooCommerce APIs
+$products = \wc_get_products(['status' => 'publish']);
+
+// ❌ DON'T: Ignore namespace requirements
+$product = wc_get_product( $id ); // Can fail in namespaced contexts
+
+// ✅ DO: Always use global namespace
+$product = \wc_get_product( $id );
+
+// ❌ DON'T: Assume methods return strings
+echo $product->get_name(); // Can output null
+
+// ✅ DO: Use null-safe operations
+echo esc_html( $product->get_name() ?: __( 'Product name not available', 'woo-offers' ) );
 ```
 
 ## **Testing Integration**
 
-### **✅ DO: Test with WooCommerce States**
+### **✅ DO: Comprehensive WooCommerce Testing**
 ```php
-// Test with different product types
-// Test with different cart states (empty, multiple items)
-// Test with different user states (logged in, guest)
-// Test with different WooCommerce settings (tax inclusive/exclusive, etc.)
+// Test with different WooCommerce states
+class WooOfferTests extends WP_UnitTestCase {
+    
+    public function setUp(): void {
+        parent::setUp();
+        
+        // Ensure WooCommerce is active for tests
+        if ( ! class_exists( 'WooCommerce' ) ) {
+            $this->markTestSkipped( 'WooCommerce is not available for testing' );
+        }
+    }
+    
+    public function test_offer_with_different_product_types() {
+        // Test with simple product
+        $simple_product = \wc_get_product( $this->create_simple_product() );
+        $this->assertInstanceOf( 'WC_Product_Simple', $simple_product );
+        
+        // Test with variable product
+        $variable_product = \wc_get_product( $this->create_variable_product() );
+        $this->assertInstanceOf( 'WC_Product_Variable', $variable_product );
+        
+        // Test offer application
+        $offer = new WooOffer( $this->create_test_offer() );
+        $this->assertTrue( $offer->applies_to_product( $simple_product ) );
+    }
+    
+    public function test_cart_integration() {
+        // Test with empty cart
+        WC()->cart->empty_cart();
+        $this->assertTrue( WC()->cart->is_empty() );
+        
+        // Test with products in cart
+        $product = \wc_get_product( $this->create_simple_product() );
+        WC()->cart->add_to_cart( $product->get_id(), 1 );
+        $this->assertFalse( WC()->cart->is_empty() );
+        
+        // Test offer application
+        $this->apply_test_offer();
+        $fees = WC()->cart->get_fees();
+        $this->assertNotEmpty( $fees );
+    }
+}
+```
+
+## **Performance Best Practices**
+
+### **✅ DO: Optimize WooCommerce Queries**
+```php
+// Cache expensive queries
+public function get_applicable_offers( $product_id ) {
+    $cache_key = 'woo_offers_applicable_' . $product_id;
+    $cached = wp_cache_get( $cache_key, 'woo_offers' );
+    
+    if ( $cached !== false ) {
+        return $cached;
+    }
+    
+    // Efficient query using WC methods
+    $offers = \wc_get_products([
+        'type' => 'woo_offer',
+        'status' => 'publish',
+        'meta_query' => [
+            [
+                'key' => '_applicable_products',
+                'value' => $product_id,
+                'compare' => 'LIKE'
+            ]
+        ],
+        'limit' => 50
+    ]);
+    
+    wp_cache_set( $cache_key, $offers, 'woo_offers', HOUR_IN_SECONDS );
+    return $offers;
+}
+
+// Batch operations when possible
+public function apply_bulk_discounts( $cart_items ) {
+    $discounts = [];
+    
+    // Calculate all discounts in one pass
+    foreach ( $cart_items as $cart_item_key => $cart_item ) {
+        $product = \wc_get_product( $cart_item['product_id'] );
+        if ( $product && $product->exists() ) {
+            $discounts[ $cart_item_key ] = $this->calculate_item_discount( $product, $cart_item );
+        }
+    }
+    
+    // Apply all discounts at once
+    $this->apply_calculated_discounts( $discounts );
+}
 ```
 
 ## **File References**
@@ -272,4 +575,8 @@ $products = wc_get_products(['status' => 'publish']);
 - [Main Plugin File](mdc:woo-offers.php)
 - [Admin Class](mdc:src/Admin/Admin.php)
 - [Frontend Assets](mdc:src/Core/Assets.php)
+
+---
+
+**📖 Always Reference**: [WooCommerce Official Documentation](mdc:https:/woocommerce.github.io) for the latest updates and best practices.
 

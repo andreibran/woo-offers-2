@@ -21,18 +21,42 @@ $selected_products = $offer_data['products'] ?? [];
     <!-- Product Search Section -->
     <div class="product-search-section">
         <h4><?php _e( 'Search Products', 'woo-offers' ); ?></h4>
-        <div class="product-search-wrapper">
-            <input type="text" 
-                   id="product-search" 
-                   class="regular-text" 
-                   placeholder="<?php esc_attr_e( 'Search for products...', 'woo-offers' ); ?>" 
-                   autocomplete="off" />
-            <span class="search-spinner spinner"></span>
+        
+        <!-- WooCommerce Native Product Search -->
+        <div class="woocommerce-product-search">
+            <label for="woocommerce-product-search"><?php _e( 'WooCommerce Product Search:', 'woo-offers' ); ?></label>
+            <select class="wc-product-search" multiple="multiple" style="width: 100%;" 
+                    id="woocommerce-product-search" 
+                    name="woocommerce_product_search[]" 
+                    data-placeholder="<?php esc_attr_e( 'Search for a product&hellip;', 'woocommerce' ); ?>" 
+                    data-action="woocommerce_json_search_products_and_variations">
+            </select>
+            <button type="button" id="add-wc-products" class="button button-primary" style="margin-top: 5px;">
+                <?php _e( 'Add Selected Products', 'woo-offers' ); ?>
+            </button>
+            <p class="description">
+                <?php _e( 'Use WooCommerce native product search. Select products and click "Add Selected Products" to include them in your offer.', 'woo-offers' ); ?>
+            </p>
         </div>
-        <div id="product-search-results" class="product-search-results"></div>
-        <p class="description">
-            <?php _e( 'Search for products to include in this offer. You can search by product name, SKU, or product ID. Type at least 2 characters to see results. Products can be simple, variable, grouped, or downloadable. Select products that work well together for your promotional strategy.', 'woo-offers' ); ?>
-        </p>
+        
+        <hr style="margin: 20px 0;" />
+        
+        <!-- Custom Product Search (Alternative) -->
+        <div class="custom-product-search">
+            <label for="product-search"><?php _e( 'Alternative Search:', 'woo-offers' ); ?></label>
+            <div class="product-search-wrapper">
+                <input type="text" 
+                       id="product-search" 
+                       class="regular-text" 
+                       placeholder="<?php esc_attr_e( 'Search for products...', 'woo-offers' ); ?>" 
+                       autocomplete="off" />
+                <span class="search-spinner spinner"></span>
+            </div>
+            <div id="product-search-results" class="product-search-results"></div>
+            <p class="description">
+                <?php _e( 'Alternative search method. Type at least 2 characters to see results. Products can be simple, variable, grouped, or downloadable.', 'woo-offers' ); ?>
+            </p>
+        </div>
     </div>
 
     <!-- Selected Products Section -->
@@ -46,7 +70,7 @@ $selected_products = $offer_data['products'] ?? [];
             <?php else: ?>
                 <?php foreach ( $selected_products as $product_data ): ?>
                     <?php
-                    $product = wc_get_product( $product_data['id'] );
+                    $product = \wc_get_product( $product_data['id'] );
                     if ( ! $product ) continue;
                     ?>
                     <div class="selected-product-item" data-product-id="<?php echo esc_attr( $product->get_id() ); ?>">
@@ -58,8 +82,8 @@ $selected_products = $offer_data['products'] ?? [];
                                 <h5 class="product-title"><?php echo esc_html( $product->get_name() ); ?></h5>
                                 <div class="product-meta">
                                     <span class="product-sku"><?php printf( __( 'SKU: %s', 'woo-offers' ), $product->get_sku() ?: __( 'N/A', 'woo-offers' ) ); ?></span>
-                                    <span class="product-price"><?php echo $product->get_price_html(); ?></span>
-                                    <span class="product-type"><?php echo wc_get_product_type_name( $product->get_type() ); ?></span>
+                                    <span class="product-price"><?php echo esc_html( $product->get_price_html() ?: __( 'Price not available', 'woo-offers' ) ); ?></span>
+                                    <span class="product-type"><?php echo esc_html( \wc_get_product_type_name( $product->get_type() ) ?: '' ); ?></span>
                                 </div>
                             </div>
                         </div>
@@ -103,6 +127,56 @@ jQuery(document).ready(function($) {
     let searchTimeout;
     let searchXhr;
     
+    // Initialize WooCommerce Enhanced Select
+    if (typeof $.fn.selectWoo !== 'undefined') {
+        $('.wc-product-search').selectWoo({
+            allowClear: true,
+            placeholder: $('.wc-product-search').data('placeholder'),
+            minimumInputLength: 3,
+            escapeMarkup: function(m) {
+                return m;
+            }
+        });
+    }
+    
+    // Handle WooCommerce product selection
+    $('#add-wc-products').on('click', function() {
+        const selectedProducts = $('#woocommerce-product-search').val();
+        
+        if (!selectedProducts || selectedProducts.length === 0) {
+            alert('<?php _e( 'Please select at least one product.', 'woo-offers' ); ?>');
+            return;
+        }
+        
+        // Get product data for selected products
+        selectedProducts.forEach(function(productId) {
+            // Check if product is already selected
+            if ($('#selected-products-list').find('[data-product-id="' + productId + '"]').length > 0) {
+                return; // Skip if already added
+            }
+            
+            // Get product data via AJAX
+            $.ajax({
+                url: typeof wooOffersAdmin !== 'undefined' ? wooOffersAdmin.ajaxUrl : ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'woo_offers_search_products',
+                    nonce: typeof wooOffersAdmin !== 'undefined' ? wooOffersAdmin.nonce : '',
+                    query: productId // Search by ID
+                },
+                success: function(response) {
+                    if (response.success && response.data.length > 0) {
+                        const product = response.data[0]; // Get first result
+                        addProductToSelection(product);
+                    }
+                }
+            });
+        });
+        
+        // Clear the select
+        $('#woocommerce-product-search').val(null).trigger('change');
+    });
+    
     // Product search functionality
     $('#product-search').on('input', function() {
         const query = $(this).val().trim();
@@ -126,11 +200,11 @@ jQuery(document).ready(function($) {
             $spinner.addClass('is-active');
             
             searchXhr = $.ajax({
-                url: wooOffersAdmin.ajaxUrl,
+                url: typeof wooOffersAdmin !== 'undefined' ? wooOffersAdmin.ajaxUrl : ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'woo_offers_search_products',
-                    nonce: wooOffersAdmin.nonce,
+                    nonce: typeof wooOffersAdmin !== 'undefined' ? wooOffersAdmin.nonce : '',
                     query: query
                 },
                 success: function(response) {
@@ -171,10 +245,10 @@ jQuery(document).ready(function($) {
                         $('#select-all-search-results').hide();
                     }
                 },
-                error: function(xhr) {
+                error: function(xhr, status, error) {
                     if (xhr.statusText !== 'abort') {
                         $spinner.removeClass('is-active');
-                        $results.html('<div class="search-error"><?php _e( 'Error searching products. Please try again.', 'woo-offers' ); ?></div>').show();
+                        $results.html('<div class="search-error"><?php _e( 'Error searching products. Please try again.', 'woo-offers' ); ?><br><small style="color: #666;">Debug: ' + status + ' - ' + error + '</small></div>').show();
                     }
                 }
             });

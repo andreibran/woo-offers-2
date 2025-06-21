@@ -80,18 +80,6 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                 <!-- Main content area -->
                 <div id="post-body-content">
                     
-                    <!-- Test Metabox -->
-                    <div id="woo_offers_test" class="postbox">
-                        <div class="postbox-header">
-                            <h2 class="hndle ui-sortable-handle">
-                                <span><?php _e( 'Test Metabox - If you see this, metaboxes are working!', 'woo-offers' ); ?></span>
-                            </h2>
-                        </div>
-                        <div class="inside">
-                            <p><?php _e( 'This is a test metabox to verify that the system is working correctly.', 'woo-offers' ); ?></p>
-                        </div>
-                    </div>
-
                     <!-- Basic Information -->
                     <div id="titlediv">
                         <div id="titlewrap">
@@ -137,17 +125,11 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                     </div>
 
                     <!-- General Settings Metabox -->
-                    <div id="woo_offers_general" class="postbox">
+                    <div id="woo_offers_general" class="postbox woo-offers-accordion">
                         <div class="postbox-header">
                             <h2 class="hndle ui-sortable-handle">
                                 <span><?php _e( 'General Settings', 'woo-offers' ); ?></span>
                             </h2>
-                            <div class="handle-actions hide-if-no-js">
-                                <button type="button" class="handlediv" aria-expanded="true">
-                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: General Settings', 'woo-offers' ); ?></span>
-                                    <span class="toggle-indicator" aria-hidden="true"></span>
-                                </button>
-                            </div>
                         </div>
                         <div class="inside">
                             <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/general.php'; ?>
@@ -155,95 +137,50 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                     </div>
 
                     <!-- Products Metabox -->
-                    <div id="woo_offers_products" class="postbox">
+                    <div id="woo_offers_products" class="postbox woo-offers-accordion collapsed">
                         <div class="postbox-header">
                             <h2 class="hndle ui-sortable-handle">
-                                <span><?php _e( 'Products', 'woo-offers' ); ?></span>
+                                <span><?php _e( 'Product Selection', 'woo-offers' ); ?></span>
                             </h2>
-                            <div class="handle-actions hide-if-no-js">
-                                <button type="button" class="handlediv" aria-expanded="true">
-                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Products', 'woo-offers' ); ?></span>
-                                    <span class="toggle-indicator" aria-hidden="true"></span>
-                                </button>
-                            </div>
                         </div>
                         <div class="inside">
                             <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/products.php'; ?>
                         </div>
                     </div>
 
+                    <!-- Appearance Metabox (moved from sidebar) -->
+                    <div id="woo_offers_appearance" class="postbox woo-offers-accordion collapsed">
+                        <div class="postbox-header">
+                            <h2 class="hndle ui-sortable-handle">
+                                <span><?php _e( 'Appearance & Styling', 'woo-offers' ); ?></span>
+                            </h2>
+                        </div>
+                        <div class="inside">
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/appearance.php'; ?>
+                        </div>
+                    </div>
+
                     <!-- Media & Preview Metabox -->
-                    <div id="woo_offers_media" class="postbox">
+                    <div id="woo_offers_media" class="postbox woo-offers-accordion collapsed">
                         <div class="postbox-header">
                             <h2 class="hndle ui-sortable-handle">
                                 <span><?php _e( 'Media & Preview', 'woo-offers' ); ?></span>
                             </h2>
-                            <div class="handle-actions hide-if-no-js">
-                                <button type="button" class="handlediv" aria-expanded="true">
-                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Media & Preview', 'woo-offers' ); ?></span>
-                                    <span class="toggle-indicator" aria-hidden="true"></span>
-                                </button>
-                            </div>
                         </div>
                         <div class="inside">
                             <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/media.php'; ?>
                         </div>
                     </div>
 
-                    <!-- Schedule Metabox -->
-                    <div id="offer-schedule" class="postbox">
+                    <!-- Schedule Settings Metabox -->
+                    <div id="woo_offers_schedule" class="postbox woo-offers-accordion collapsed">
                         <div class="postbox-header">
                             <h2 class="hndle ui-sortable-handle">
-                                <span><?php _e( 'Schedule', 'woo-offers' ); ?></span>
+                                <span><?php _e( 'Schedule & Conditions', 'woo-offers' ); ?></span>
                             </h2>
-                            <div class="handle-actions hide-if-no-js">
-                                <button type="button" class="handle-order-higher" aria-describedby="offer-schedule-handle-order-higher-description">
-                                    <span class="screen-reader-text"><?php _e( 'Move up', 'woo-offers' ); ?></span>
-                                    <span class="order-higher-indicator" aria-hidden="true"></span>
-                                </button>
-                                <button type="button" class="handle-order-lower" aria-describedby="offer-schedule-handle-order-lower-description">
-                                    <span class="screen-reader-text"><?php _e( 'Move down', 'woo-offers' ); ?></span>
-                                    <span class="order-lower-indicator" aria-hidden="true"></span>
-                                </button>
-                                <button type="button" class="handlediv" aria-expanded="true">
-                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Schedule', 'woo-offers' ); ?></span>
-                                    <span class="toggle-indicator" aria-hidden="true"></span>
-                                </button>
-                            </div>
                         </div>
                         <div class="inside">
-                            <table class="form-table">
-                                <tr>
-                                    <th scope="row">
-                                        <label for="start_date"><?php _e( 'Start Date', 'woo-offers' ); ?></label>
-                                    </th>
-                                    <td>
-                                        <input type="datetime-local" 
-                                               name="start_date" 
-                                               id="start_date" 
-                                               value="<?php echo esc_attr( $offer_data['start_date'] ? date( 'Y-m-d\TH:i', strtotime( $offer_data['start_date'] ) ) : '' ); ?>" 
-                                               class="regular-text">
-                                        <p class="description">
-                                            <?php _e( 'Leave blank to start immediately when activated.', 'woo-offers' ); ?>
-                                        </p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">
-                                        <label for="end_date"><?php _e( 'End Date', 'woo-offers' ); ?></label>
-                                    </th>
-                                    <td>
-                                        <input type="datetime-local" 
-                                               name="end_date" 
-                                               id="end_date" 
-                                               value="<?php echo esc_attr( $offer_data['end_date'] ? date( 'Y-m-d\TH:i', strtotime( $offer_data['end_date'] ) ) : '' ); ?>" 
-                                               class="regular-text">
-                                        <p class="description">
-                                            <?php _e( 'Leave blank for no expiration date.', 'woo-offers' ); ?>
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
+                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/schedule.php'; ?>
                         </div>
                     </div>
 
@@ -340,21 +277,31 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
                         </div>
                     </div>
 
-                    <!-- Appearance Metabox -->
-                    <div id="woo_offers_appearance" class="postbox">
+                    <!-- Quick Tips -->
+                    <div id="woo-offers-tips" class="postbox">
                         <div class="postbox-header">
                             <h2 class="hndle ui-sortable-handle">
-                                <span><?php _e( 'Appearance', 'woo-offers' ); ?></span>
+                                <span><?php _e( 'Quick Tips', 'woo-offers' ); ?></span>
                             </h2>
-                            <div class="handle-actions hide-if-no-js">
-                                <button type="button" class="handlediv" aria-expanded="true">
-                                    <span class="screen-reader-text"><?php _e( 'Toggle panel: Appearance', 'woo-offers' ); ?></span>
-                                    <span class="toggle-indicator" aria-hidden="true"></span>
-                                </button>
-                            </div>
                         </div>
                         <div class="inside">
-                            <?php include WOO_OFFERS_PLUGIN_PATH . 'templates/admin/metaboxes/appearance.php'; ?>
+                            <div class="woo-offers-tips">
+                                <h4>💡 <?php _e( 'Pro Tips', 'woo-offers' ); ?></h4>
+                                <ul>
+                                    <li>📝 <?php _e( 'Start with "General Settings" to configure your offer basics', 'woo-offers' ); ?></li>
+                                    <li>🎨 <?php _e( 'Use "Appearance & Styling" to make your offer stand out', 'woo-offers' ); ?></li>
+                                    <li>📅 <?php _e( 'Set dates in "Schedule & Conditions" for time-limited offers', 'woo-offers' ); ?></li>
+                                    <li>👀 <?php _e( 'Preview your offer before publishing', 'woo-offers' ); ?></li>
+                                </ul>
+                                
+                                <h4>🚀 <?php _e( 'Best Practices', 'woo-offers' ); ?></h4>
+                                <ul>
+                                    <li>✨ <?php _e( 'Use clear, compelling offer titles', 'woo-offers' ); ?></li>
+                                    <li>🎯 <?php _e( 'Target specific products for better results', 'woo-offers' ); ?></li>
+                                    <li>⏰ <?php _e( 'Create urgency with limited-time offers', 'woo-offers' ); ?></li>
+                                    <li>📊 <?php _e( 'Monitor performance and adjust accordingly', 'woo-offers' ); ?></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -408,11 +355,36 @@ $page_title = $is_editing ? __( 'Edit Offer', 'woo-offers' ) : __( 'Create New O
 
 <!-- JavaScript for enhanced form validation and behavior -->
 <script>
+// Fallback localization if wooOffersAdmin is not loaded
+if (typeof wooOffersAdmin === 'undefined') {
+    window.wooOffersAdmin = {
+        ajaxUrl: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
+        nonce: '<?php echo wp_create_nonce( 'woo_offers_nonce' ); ?>',
+        pluginUrl: '<?php echo WOO_OFFERS_PLUGIN_URL; ?>',
+        currentPage: '<?php echo $_GET['page'] ?? ''; ?>',
+        strings: {
+            confirmDelete: '<?php echo esc_js( __( 'Are you sure you want to delete this offer?', 'woo-offers' ) ); ?>',
+            confirmBulkDelete: '<?php echo esc_js( __( 'Are you sure you want to delete the selected offers?', 'woo-offers' ) ); ?>',
+            offerSaved: '<?php echo esc_js( __( 'Offer saved successfully!', 'woo-offers' ) ); ?>',
+            offerDeleted: '<?php echo esc_js( __( 'Offer deleted successfully!', 'woo-offers' ) ); ?>',
+            error: '<?php echo esc_js( __( 'An error occurred. Please try again.', 'woo-offers' ) ); ?>',
+            selectItems: '<?php echo esc_js( __( 'Please select at least one item.', 'woo-offers' ) ); ?>',
+            filtering: '<?php echo esc_js( __( 'Filtering...', 'woo-offers' ) ); ?>',
+            filter: '<?php echo esc_js( __( 'Filter', 'woo-offers' ) ); ?>',
+            searching: '<?php echo esc_js( __( 'Searching...', 'woo-offers' ) ); ?>',
+            noResults: '<?php echo esc_js( __( 'No offers found.', 'woo-offers' ) ); ?>'
+        }
+    };
+}
+
 jQuery(document).ready(function($) {
     // Initialize metaboxes
     if (typeof postboxes !== 'undefined') {
         postboxes.add_postbox_toggles('woo_offers_edit');
     }
+    
+    // Initialize accordion functionality
+    initAccordion();
     
     // Initialize form validation
     initFormValidation();
@@ -426,6 +398,32 @@ jQuery(document).ready(function($) {
         }, 2000);
     });
 });
+
+// Initialize accordion system
+function initAccordion() {
+    const $ = jQuery;
+    
+    // Add click handler to accordion headers
+    $('.woo-offers-accordion .postbox-header').on('click', function(e) {
+        e.preventDefault();
+        
+        const $accordion = $(this).closest('.woo-offers-accordion');
+        const $content = $accordion.find('.inside');
+        
+        // Toggle collapsed class
+        $accordion.toggleClass('collapsed');
+        
+        // Animate the content
+        if ($accordion.hasClass('collapsed')) {
+            $content.slideUp(300);
+        } else {
+            $content.slideDown(300);
+        }
+    });
+    
+    // Initialize collapsed state for elements with collapsed class
+    $('.woo-offers-accordion.collapsed .inside').hide();
+};
 
 // Enhanced form validation system
 function initFormValidation() {

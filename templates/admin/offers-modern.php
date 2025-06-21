@@ -12,77 +12,25 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Use CampaignManager for real data instead of Offers_List_Table
-use WooOffers\Campaigns\CampaignManager;
+// Load the Offers List Table class for data processing
+require_once WOO_OFFERS_PLUGIN_PATH . 'src/Admin/class-offers-list-table.php';
 
-// Get current filters and pagination
+// Create and prepare the list table for data fetching
+$offers_table = new \WooOffers\Admin\Offers_List_Table();
+$offers_table->prepare_items();
+
+// Get summary statistics
+$stats = $offers_table->get_summary_stats();
+
+// Get current filters
 $current_search = sanitize_text_field( $_GET['s'] ?? '' );
 $current_status = sanitize_text_field( $_GET['status'] ?? '' );
 $current_type = sanitize_text_field( $_GET['type'] ?? '' );
-$current_view = sanitize_text_field( $_GET['view'] ?? 'cards' );
-$current_page = max( 1, intval( $_GET['paged'] ?? 1 ) );
-$per_page = 20;
+$current_view = sanitize_text_field( $_GET['view'] ?? 'cards' ); // New view toggle
 
-// Build query parameters for CampaignManager
-$args = [
-    'page' => $current_page,
-    'per_page' => $per_page,
-    'orderby' => sanitize_text_field( $_GET['orderby'] ?? 'created_at' ),
-    'order' => sanitize_text_field( $_GET['order'] ?? 'DESC' )
-];
-
-if ( ! empty( $current_search ) ) {
-    $args['search'] = $current_search;
-}
-
-if ( ! empty( $current_status ) ) {
-    $args['status'] = $current_status;
-}
-
-if ( ! empty( $current_type ) ) {
-    $args['type'] = $current_type;
-}
-
-// Get campaigns data from CampaignManager
-$campaigns_data = CampaignManager::get_campaigns( $args );
-$campaigns = $campaigns_data['campaigns'] ?? [];
-$total_items = $campaigns_data['total_items'] ?? 0;
-$total_pages = $campaigns_data['total_pages'] ?? 1;
-
-// Calculate summary stats from campaigns
-$stats = [
-    'total_offers' => $total_items,
-    'active_offers' => 0,
-    'inactive_offers' => 0,
-    'draft_offers' => 0,
-    'total_revenue' => 0,
-    'total_conversions' => 0,
-    'total_views' => 0,
-    'conversion_rate' => 0
-];
-
-// Calculate stats (for cards view, we'll need all campaigns for accurate stats)
-if ( ! empty( $campaigns ) ) {
-    foreach ( $campaigns as $campaign ) {
-        if ( $campaign->status === 'active' ) {
-            $stats['active_offers']++;
-        } elseif ( $campaign->status === 'paused' ) {
-            $stats['inactive_offers']++;
-        } elseif ( $campaign->status === 'draft' ) {
-            $stats['draft_offers']++;
-        }
-        
-        // Note: Real analytics data would come from AnalyticsManager
-        // For now, using placeholder data
-        $stats['total_conversions'] += rand( 0, 50 );
-        $stats['total_revenue'] += rand( 100, 5000 );
-        $stats['total_views'] += rand( 100, 1000 );
-    }
-    
-    if ( $stats['total_views'] > 0 ) {
-        $stats['conversion_rate'] = round( ( $stats['total_conversions'] / $stats['total_views'] ) * 100, 2 );
-    }
-}
+// Get pagination info
+$current_page = $offers_table->get_pagenum();
+$total_items = count( $offers_table->items );
 ?>
 
 <div class="woo-offers-modern wo-container">
@@ -106,15 +54,22 @@ if ( ! empty( $campaigns ) ) {
             </p>
         </div>
         <div class="campaigns-actions wo-flex wo-gap-4">
-            <a href="<?php echo admin_url( 'admin.php?page=woo-offers-campaign-wizard' ); ?>" 
-               class="wo-btn wo-btn-primary wo-btn-lg">
-                <span class="dashicons dashicons-plus-alt2" style="margin-right: var(--wo-space-2);"></span>
-                <?php _e( 'Create Campaign', 'woo-offers' ); ?>
-            </a>
+            <button type="button" 
+                    id="export-campaigns-csv"
+                    class="wo-btn wo-btn-outline"
+                    data-tooltip="<?php _e( 'Export campaigns data to CSV', 'woo-offers' ); ?>">
+                <span class="dashicons dashicons-download" style="margin-right: var(--wo-space-2);"></span>
+                <?php _e( 'Export CSV', 'woo-offers' ); ?>
+            </button>
             <a href="<?php echo admin_url( 'admin.php?page=woo-offers-analytics' ); ?>" 
                class="wo-btn wo-btn-outline">
                 <span class="dashicons dashicons-chart-area" style="margin-right: var(--wo-space-2);"></span>
                 <?php _e( 'Analytics', 'woo-offers' ); ?>
+            </a>
+            <a href="<?php echo admin_url( 'admin.php?page=woo-offers-create-campaign' ); ?>" 
+               class="wo-btn wo-btn-primary wo-btn-lg">
+                <span class="dashicons dashicons-plus-alt2" style="margin-right: var(--wo-space-2);"></span>
+                <?php _e( 'Create Campaign', 'woo-offers' ); ?>
             </a>
         </div>
     </header>
@@ -125,7 +80,7 @@ if ( ! empty( $campaigns ) ) {
             <h2 class="wo-sr-only"><?php _e( 'Campaign Metrics Overview', 'woo-offers' ); ?></h2>
             <div class="wo-grid wo-grid-cols-1 wo-md:grid-cols-2 wo-lg:grid-cols-4 wo-gap-6">
                 <!-- Total Campaigns -->
-                <div class="wo-card metric-card" data-metric="total">
+                <div class="wo-card metric-card">
                     <div class="wo-card-body wo-flex wo-items-center">
                         <div class="metric-icon" style="margin-right: var(--wo-space-4); color: var(--wo-primary-500);">
                             <span class="dashicons dashicons-megaphone" style="font-size: var(--wo-text-3xl);"></span>
@@ -139,7 +94,7 @@ if ( ! empty( $campaigns ) ) {
                             </div>
                             <div class="metric-breakdown" style="font-size: var(--wo-text-xs); color: var(--wo-text-muted); margin-top: var(--wo-space-1);">
                                 <span style="color: var(--wo-success-600);"><?php echo intval( $stats['active_offers'] ); ?> active</span> • 
-                                <span style="color: var(--wo-error-600);"><?php echo intval( $stats['inactive_offers'] ); ?> paused</span> • 
+                                <span style="color: var(--wo-error-600);"><?php echo intval( $stats['inactive_offers'] ); ?> inactive</span> • 
                                 <span style="color: var(--wo-warning-600);"><?php echo intval( $stats['draft_offers'] ); ?> draft</span>
                             </div>
                         </div>
@@ -147,7 +102,7 @@ if ( ! empty( $campaigns ) ) {
                 </div>
 
                 <!-- Total Revenue -->
-                <div class="wo-card metric-card" data-metric="revenue">
+                <div class="wo-card metric-card">
                     <div class="wo-card-body wo-flex wo-items-center">
                         <div class="metric-icon" style="margin-right: var(--wo-space-4); color: var(--wo-success-500);">
                             <span class="dashicons dashicons-money-alt" style="font-size: var(--wo-text-3xl);"></span>
@@ -173,7 +128,7 @@ if ( ! empty( $campaigns ) ) {
                 </div>
 
                 <!-- Conversion Rate -->
-                <div class="wo-card metric-card" data-metric="conversion">
+                <div class="wo-card metric-card">
                     <div class="wo-card-body wo-flex wo-items-center">
                         <div class="metric-icon" style="margin-right: var(--wo-space-4); color: var(--wo-warning-500);">
                             <span class="dashicons dashicons-chart-line" style="font-size: var(--wo-text-3xl);"></span>
@@ -193,7 +148,7 @@ if ( ! empty( $campaigns ) ) {
                 </div>
 
                 <!-- Active Campaigns -->
-                <div class="wo-card metric-card" data-metric="active">
+                <div class="wo-card metric-card">
                     <div class="wo-card-body wo-flex wo-items-center">
                         <div class="metric-icon" style="margin-right: var(--wo-space-4); color: var(--wo-error-500);">
                             <span class="dashicons dashicons-controls-play" style="font-size: var(--wo-text-3xl);"></span>
@@ -319,7 +274,7 @@ if ( ! empty( $campaigns ) ) {
                     </a>
                 </div>
 
-            <?php elseif ( empty( $campaigns ) ): ?>
+            <?php elseif ( empty( $offers_table->items ) ): ?>
                 <!-- No Results State -->
                 <div class="wo-card" style="text-align: center; padding: var(--wo-space-12);">
                     <div style="color: var(--wo-text-muted); margin-bottom: var(--wo-space-4);">
@@ -341,12 +296,12 @@ if ( ! empty( $campaigns ) ) {
                 <!-- Campaigns List -->
                 <div id="campaigns-view-cards" class="campaigns-cards-view <?php echo $current_view === 'cards' ? '' : 'hidden'; ?>">
                     <div class="wo-grid wo-grid-cols-1 wo-md:grid-cols-2 wo-lg:grid-cols-3 wo-gap-6">
-                        <?php foreach ( $campaigns as $campaign ): ?>
+                        <?php foreach ( $offers_table->items as $campaign ): ?>
                             <?php 
                             $edit_url = add_query_arg([
                                 'page'   => 'woo-offers-create',
                                 'action' => 'edit',
-                                'id'     => $campaign->id
+                                'id'     => $campaign['id']
                             ], admin_url( 'admin.php' ));
 
                             $status_colors = [
@@ -354,11 +309,11 @@ if ( ! empty( $campaigns ) ) {
                                 'inactive' => 'var(--wo-error-500)',
                                 'draft'    => 'var(--wo-warning-500)'
                             ];
-                            $status_color = $status_colors[$campaign->status] ?? 'var(--wo-gray-500)';
+                            $status_color = $status_colors[$campaign['status']] ?? 'var(--wo-gray-500)';
 
                             $conversion_rate = 0;
-                            if ( isset( $campaign->views ) && $campaign->views > 0 ) {
-                                $conversion_rate = round( ( $campaign->conversions / $campaign->views ) * 100, 2 );
+                            if ( isset( $campaign['views'] ) && $campaign['views'] > 0 ) {
+                                $conversion_rate = round( ( $campaign['conversions'] / $campaign['views'] ) * 100, 2 );
                             }
                             ?>
                             <article class="wo-card campaign-card">
@@ -368,16 +323,16 @@ if ( ! empty( $campaigns ) ) {
                                         <h4 style="margin: 0 0 var(--wo-space-2); font-size: var(--wo-text-lg); font-weight: var(--wo-font-semibold);">
                                             <a href="<?php echo esc_url( $edit_url ); ?>" 
                                                style="color: var(--wo-text-primary); text-decoration: none;">
-                                                <?php echo esc_html( $campaign->title ); ?>
+                                                <?php echo esc_html( $campaign['title'] ); ?>
                                             </a>
                                         </h4>
                                         <div style="font-size: var(--wo-text-sm); color: var(--wo-text-secondary);">
-                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $campaign->type ) ) ); ?>
+                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $campaign['type'] ) ) ); ?>
                                         </div>
                                     </div>
                                     <div class="campaign-status" 
                                          style="padding: var(--wo-space-1) var(--wo-space-3); background: <?php echo $status_color; ?>; color: white; border-radius: var(--wo-border-radius-full); font-size: var(--wo-text-xs); font-weight: var(--wo-font-medium);">
-                                        <?php echo esc_html( ucfirst( $campaign->status ) ); ?>
+                                        <?php echo esc_html( ucfirst( $campaign['status'] ) ); ?>
                                     </div>
                                 </div>
 
@@ -386,7 +341,7 @@ if ( ! empty( $campaigns ) ) {
                                     <div class="wo-grid wo-grid-cols-2 wo-gap-4">
                                         <div class="metric">
                                             <div style="font-size: var(--wo-text-2xl); font-weight: var(--wo-font-bold); color: var(--wo-text-primary);">
-                                                <?php echo number_format( $campaign->conversions ); ?>
+                                                <?php echo number_format( $campaign['conversions'] ); ?>
                                             </div>
                                             <div style="font-size: var(--wo-text-xs); color: var(--wo-text-muted);">
                                                 <?php _e( 'Conversions', 'woo-offers' ); ?>
@@ -405,9 +360,9 @@ if ( ! empty( $campaigns ) ) {
                                                 <div style="font-size: var(--wo-text-base); font-weight: var(--wo-font-medium); color: var(--wo-text-primary);">
                                                     <?php 
                                                     if ( function_exists( 'wc_price' ) ) {
-                                                        echo wc_price( $campaign->revenue );
+                                                        echo wc_price( $campaign['revenue'] );
                                                     } else {
-                                                        echo '$' . number_format( $campaign->revenue, 2 );
+                                                        echo '$' . number_format( $campaign['revenue'], 2 );
                                                     }
                                                     ?>
                                                 </div>
@@ -419,7 +374,7 @@ if ( ! empty( $campaigns ) ) {
                                         <div class="metric">
                                             <div style="font-size: var(--wo-text-base); color: var(--wo-text-secondary);">
                                                 <?php 
-                                                $date = new DateTime( $campaign->date );
+                                                $date = new DateTime( $campaign['date'] );
                                                 echo $date->format( 'M d, Y' );
                                                 ?>
                                             </div>
@@ -439,7 +394,7 @@ if ( ! empty( $campaigns ) ) {
                                         </a>
                                         <button type="button" 
                                                 class="wo-btn wo-btn-sm wo-btn-secondary"
-                                                data-campaign-id="<?php echo esc_attr( $campaign->id ); ?>"
+                                                data-campaign-id="<?php echo esc_attr( $campaign['id'] ); ?>"
                                                 data-action="duplicate">
                                             <?php _e( 'Duplicate', 'woo-offers' ); ?>
                                         </button>
@@ -447,7 +402,7 @@ if ( ! empty( $campaigns ) ) {
                                     <div class="campaign-menu">
                                         <button type="button" 
                                                 class="wo-btn wo-btn-sm wo-btn-secondary"
-                                                data-campaign-id="<?php echo esc_attr( $campaign->id ); ?>"
+                                                data-campaign-id="<?php echo esc_attr( $campaign['id'] ); ?>"
                                                 data-action="menu">
                                             <span class="dashicons dashicons-ellipsis"></span>
                                             <span class="wo-sr-only"><?php _e( 'More actions', 'woo-offers' ); ?></span>
@@ -459,147 +414,27 @@ if ( ! empty( $campaigns ) ) {
                     </div>
                 </div>
 
-                <!-- Table View -->
+                <!-- Table View (Legacy) -->
                 <div id="campaigns-view-table" class="campaigns-table-view <?php echo $current_view === 'table' ? '' : 'hidden'; ?>">
                     <div class="wo-card">
                         <div class="wo-card-body" style="padding: 0;">
-                            <div class="campaign-table-container">
-                                <table class="wo-table">
-                                    <thead>
-                                        <tr>
-                                            <th><?php _e( 'Campaign', 'woo-offers' ); ?></th>
-                                            <th><?php _e( 'Type', 'woo-offers' ); ?></th>
-                                            <th><?php _e( 'Status', 'woo-offers' ); ?></th>
-                                            <th><?php _e( 'Conversions', 'woo-offers' ); ?></th>
-                                            <th><?php _e( 'Revenue', 'woo-offers' ); ?></th>
-                                            <th><?php _e( 'Actions', 'woo-offers' ); ?></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ( $campaigns as $campaign ): ?>
-                                            <tr>
-                                                <td>
-                                                    <strong><?php echo esc_html( $campaign->title ); ?></strong>
-                                                    <div style="font-size: var(--wo-text-sm); color: var(--wo-text-muted);">
-                                                        <?php echo date_i18n( get_option( 'date_format' ), strtotime( $campaign->date ) ); ?>
-                                                    </div>
-                                                </td>
-                                                <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $campaign->type ) ) ); ?></td>
-                                                <td>
-                                                    <span class="campaign-status" style="padding: var(--wo-space-1) var(--wo-space-2); border-radius: var(--wo-border-radius); font-size: var(--wo-text-xs);">
-                                                        <?php echo esc_html( ucfirst( $campaign->status ) ); ?>
-                                                    </span>
-                                                </td>
-                                                <td><?php echo number_format( $campaign->conversions ); ?></td>
-                                                <td>
-                                                    <?php 
-                                                    if ( function_exists( 'wc_price' ) ) {
-                                                        echo wc_price( $campaign->revenue );
-                                                    } else {
-                                                        echo '$' . number_format( $campaign->revenue, 2 );
-                                                    }
-                                                    ?>
-                                                </td>
-                                                <td>
-                                                    <div class="wo-flex wo-gap-2">
-                                                        <button class="wo-btn wo-btn-sm wo-btn-primary" 
-                                                                data-campaign-id="<?php echo esc_attr( $campaign->id ); ?>"
-                                                                data-action="edit">
-                                                            <?php _e( 'Edit', 'woo-offers' ); ?>
-                                                        </button>
-                                                        <button class="wo-btn wo-btn-sm wo-btn-secondary" 
-                                                                data-campaign-id="<?php echo esc_attr( $campaign->id ); ?>"
-                                                                data-action="duplicate">
-                                                            <?php _e( 'Duplicate', 'woo-offers' ); ?>
-                                                        </button>
-                                                        <button class="wo-btn wo-btn-sm wo-btn-danger" 
-                                                                data-campaign-id="<?php echo esc_attr( $campaign->id ); ?>"
-                                                                data-action="delete">
-                                                            <?php _e( 'Delete', 'woo-offers' ); ?>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <form id="offers-table-form" method="get">
+                                <input type="hidden" name="page" value="<?php echo esc_attr( $_REQUEST['page'] ?? 'woo-offers-offers' ); ?>" />
+                                <?php $offers_table->display(); ?>
+                            </form>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pagination -->
-                <?php if ( $total_pages > 1 ): ?>
+                <?php if ( $offers_table->get_pagination_arg( 'total_pages' ) > 1 ): ?>
                     <div class="pagination-wrapper wo-flex wo-justify-center" style="margin-top: var(--wo-space-8);">
-                        <nav class="pagination">
-                            <?php
-                            $pagination_args = [
-                                'base' => add_query_arg( 'paged', '%#%' ),
-                                'format' => '',
-                                'total' => $total_pages,
-                                'current' => $current_page,
-                                'show_all' => false,
-                                'end_size' => 1,
-                                'mid_size' => 2,
-                                'prev_next' => true,
-                                'prev_text' => __( '&laquo; Previous', 'woo-offers' ),
-                                'next_text' => __( 'Next &raquo;', 'woo-offers' ),
-                                'type' => 'array'
-                            ];
-                            
-                            $pagination_links = paginate_links( $pagination_args );
-                            
-                            if ( $pagination_links ) {
-                                echo '<ul class="page-numbers">';
-                                foreach ( $pagination_links as $link ) {
-                                    echo '<li>' . $link . '</li>';
-                                }
-                                echo '</ul>';
-                            }
-                            ?>
-                        </nav>
+                        <?php $offers_table->pagination( 'bottom' ); ?>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
         </section>
     </main>
-</div>
-
-<!-- Bulk Actions Floating Bar (Hidden by default) -->
-<div id="bulk-actions-bar" class="bulk-actions-bar hidden">
-    <div class="wo-container wo-flex wo-justify-between wo-items-center">
-        <div class="bulk-selection-info">
-            <span id="bulk-count">0</span> <?php _e( 'campaigns selected', 'woo-offers' ); ?>
-        </div>
-        <div class="bulk-actions wo-flex wo-gap-3">
-            <button type="button" class="wo-btn wo-btn-sm wo-btn-secondary" data-bulk-action="activate">
-                <?php _e( 'Activate', 'woo-offers' ); ?>
-            </button>
-            <button type="button" class="wo-btn wo-btn-sm wo-btn-secondary" data-bulk-action="pause">
-                <?php _e( 'Pause', 'woo-offers' ); ?>
-            </button>
-            <button type="button" class="wo-btn wo-btn-sm wo-btn-danger" data-bulk-action="delete">
-                <?php _e( 'Delete', 'woo-offers' ); ?>
-            </button>
-            <button type="button" class="wo-btn wo-btn-sm wo-btn-outline" id="bulk-cancel">
-                <?php _e( 'Cancel', 'woo-offers' ); ?>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Context Menu (Hidden by default) -->
-<div id="context-menu" class="context-menu hidden">
-    <ul class="context-menu-list">
-        <li><button data-action="edit"><?php _e( 'Edit Campaign', 'woo-offers' ); ?></button></li>
-        <li><button data-action="duplicate"><?php _e( 'Duplicate', 'woo-offers' ); ?></button></li>
-        <li><button data-action="analytics"><?php _e( 'View Analytics', 'woo-offers' ); ?></button></li>
-        <li class="separator"></li>
-        <li><button data-action="pause"><?php _e( 'Pause Campaign', 'woo-offers' ); ?></button></li>
-        <li><button data-action="activate"><?php _e( 'Activate Campaign', 'woo-offers' ); ?></button></li>
-        <li class="separator"></li>
-        <li><button data-action="delete" class="danger"><?php _e( 'Delete Campaign', 'woo-offers' ); ?></button></li>
-    </ul>
 </div>
 
 <style>
@@ -632,152 +467,6 @@ if ( ! empty( $campaigns ) ) {
     display: none !important;
 }
 
-/* Table Styles */
-.wo-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--wo-text-sm);
-}
-
-.wo-table th,
-.wo-table td {
-    padding: var(--wo-space-3) var(--wo-space-4);
-    text-align: left;
-    border-bottom: var(--wo-border-width) solid var(--wo-border-secondary);
-}
-
-.wo-table th {
-    background: var(--wo-gray-50);
-    font-weight: var(--wo-font-semibold);
-    color: var(--wo-text-secondary);
-}
-
-.wo-table tbody tr:hover {
-    background: var(--wo-gray-50);
-}
-
-/* Bulk Actions Bar */
-.bulk-actions-bar {
-    position: fixed;
-    bottom: var(--wo-space-4);
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--wo-background);
-    border: var(--wo-border-width) solid var(--wo-border-primary);
-    border-radius: var(--wo-border-radius-lg);
-    box-shadow: var(--wo-shadow-xl);
-    padding: var(--wo-space-4);
-    z-index: 1000;
-    min-width: 400px;
-}
-
-.bulk-actions-bar:not(.hidden) {
-    display: block;
-    animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(100%);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-/* Context Menu */
-.context-menu {
-    position: fixed;
-    background: var(--wo-background);
-    border: var(--wo-border-width) solid var(--wo-border-primary);
-    border-radius: var(--wo-border-radius);
-    box-shadow: var(--wo-shadow-lg);
-    z-index: 1000;
-    min-width: 180px;
-}
-
-.context-menu-list {
-    list-style: none;
-    margin: 0;
-    padding: var(--wo-space-2) 0;
-}
-
-.context-menu-list li {
-    margin: 0;
-}
-
-.context-menu-list button {
-    width: 100%;
-    padding: var(--wo-space-2) var(--wo-space-4);
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-    font-size: var(--wo-text-sm);
-    color: var(--wo-text-primary);
-    transition: background-color var(--wo-transition-fast);
-}
-
-.context-menu-list button:hover {
-    background: var(--wo-gray-100);
-}
-
-.context-menu-list button.danger {
-    color: var(--wo-error-600);
-}
-
-.context-menu-list button.danger:hover {
-    background: var(--wo-error-50);
-}
-
-.context-menu-list .separator {
-    height: 1px;
-    background: var(--wo-border-secondary);
-    margin: var(--wo-space-1) 0;
-}
-
-/* Pagination */
-.pagination .page-numbers {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    gap: var(--wo-space-1);
-}
-
-.pagination .page-numbers li {
-    margin: 0;
-}
-
-.pagination .page-numbers a,
-.pagination .page-numbers span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--wo-space-2) var(--wo-space-3);
-    border: var(--wo-border-width) solid var(--wo-border-secondary);
-    border-radius: var(--wo-border-radius);
-    color: var(--wo-text-primary);
-    text-decoration: none;
-    font-size: var(--wo-text-sm);
-    min-width: 40px;
-    height: 40px;
-    transition: all var(--wo-transition-fast);
-}
-
-.pagination .page-numbers a:hover {
-    background: var(--wo-gray-100);
-    border-color: var(--wo-border-primary);
-}
-
-.pagination .page-numbers .current {
-    background: var(--wo-primary-500);
-    color: white;
-    border-color: var(--wo-primary-500);
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .campaigns-header {
@@ -806,22 +495,6 @@ if ( ! empty( $campaigns ) ) {
     .filter-actions .wo-btn {
         flex: 1;
     }
-    
-    .bulk-actions-bar {
-        left: var(--wo-space-4);
-        right: var(--wo-space-4);
-        transform: none;
-        min-width: auto;
-    }
-    
-    .wo-table {
-        font-size: var(--wo-text-xs);
-    }
-    
-    .wo-table th,
-    .wo-table td {
-        padding: var(--wo-space-2);
-    }
 }
 
 /* Animation for view switching */
@@ -833,33 +506,7 @@ if ( ! empty( $campaigns ) ) {
 .campaigns-cards-view.hidden,
 .campaigns-table-view.hidden {
     opacity: 0;
-    transform: translateY(-10px);
-}
-
-/* Loading states */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid var(--wo-primary-500);
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    transform: translateY(10px);
 }
 </style>
 

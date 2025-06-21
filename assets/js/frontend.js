@@ -29,9 +29,67 @@
             }
 
             this.log('Initializing WooOffers Analytics...');
-            this.bindEvents();
-            this.trackOfferViews();
-            this.setupConversionTracking();
+            
+            // ✅ COMPATIBILITY: Check if advanced analytics-tracker.js is loaded
+            if (window.WooOffersAnalytics && typeof window.WooOffersAnalytics.trackView === 'function') {
+                this.log('Advanced analytics tracker detected, using simplified offer-specific tracking');
+                this.useAdvancedTracker = true;
+                this.bindOfferEvents(); // Only track offer-specific events
+                this.setupConversionTracking();
+                this.setCampaignAttribution();
+            } else {
+                this.log('Using full analytics tracking');
+                this.useAdvancedTracker = false;
+                this.bindEvents();
+                this.trackOfferViews();
+                this.setupConversionTracking();
+                this.setCampaignAttribution();
+            }
+        },
+
+        setCampaignAttribution: function() {
+            // ✅ NEW: Set campaign attribution for conversion tracking
+            const campaignId = this.getCampaignIdFromPage();
+            if (campaignId) {
+                this.log('Setting campaign attribution:', campaignId);
+                
+                // Store attribution in session and cookie
+                sessionStorage.setItem('woo_offers_campaign_attribution', campaignId);
+                document.cookie = `woo_offers_campaign_attribution=${campaignId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+            }
+        },
+
+        getCampaignIdFromPage: function() {
+            // Try to find campaign ID from various sources
+            const campaignElement = document.querySelector('[data-campaign-id]');
+            if (campaignElement) {
+                return campaignElement.getAttribute('data-campaign-id');
+            }
+            
+            // Check URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const campaignParam = urlParams.get('campaign_id') || urlParams.get('woo_campaign');
+            if (campaignParam) {
+                return campaignParam;
+            }
+            
+            return null;
+        },
+
+        bindOfferEvents: function() {
+            // ✅ SIMPLIFIED: Only track offer-specific events when advanced tracker is present
+            const self = this;
+
+            // Track offer application attempts (not covered by advanced tracker)
+            $(document).on('click', '.apply-percentage-discount, .apply-fixed-discount, .apply-bogo-offer, .apply-bundle-offer, .apply-quantity-discount, .apply-free-shipping', function(e) {
+                e.preventDefault();
+                
+                const $button = $(this);
+                const offerId = $button.data('offer-id');
+                const offerType = $button.closest('.woo-offer').data('offer-type');
+                
+                self.applyOfferWithTracking(offerId, offerType, $button);
+            });
         },
 
         bindEvents: function() {
@@ -138,6 +196,18 @@
             const self = this;
             const startTime = Date.now();
             
+            // ✅ SECURITY: Validate input data before processing
+            if (!this.validateOfferInput(offerId, offerType)) {
+                this.showOfferMessage('Invalid offer data', 'error');
+                return;
+            }
+
+            // ✅ SECURITY: Validate nonce before making request
+            if (!this.validateNonce()) {
+                this.showOfferMessage('Security validation failed. Please refresh the page.', 'error');
+                return;
+            }
+            
             // Show loading state
             $button.prop('disabled', true).addClass('loading');
             const originalText = $button.find('.button-text').text() || $button.text();
@@ -153,14 +223,14 @@
                 timestamp: startTime
             });
 
-            // AJAX request to apply offer
-            $.ajax({
+            // ✅ SECURITY: Use secure AJAX wrapper with sanitized data
+            this.secureAjax({
                 url: this.config.ajaxUrl,
                 type: 'POST',
                 data: {
                     action: 'woo_offers_apply_offer',
-                    offer_id: offerId,
-                    product_id: this.getCurrentProductId(),
+                    offer_id: this.sanitizeInput(offerId, 'int'),
+                    product_id: this.sanitizeInput(this.getCurrentProductId(), 'int'),
                     nonce: this.config.nonce
                 },
                 success: function(response) {
@@ -259,19 +329,48 @@
         sendEvent: function(eventData) {
             const self = this;
             
+            // ✅ FIXED: Send data in format expected by AnalyticsManager.php
+            const ajaxData = {
+                action: 'woo_offers_track_event',
+                nonce: this.config.nonce,
+                event_type: eventData.event_type,
+                campaign_id: eventData.offer_id || eventData.campaign_id || 0,
+                page_url: eventData.url || window.location.href,
+                referrer_url: eventData.referrer || document.referrer,
+                session_id: eventData.session_id,
+                user_id: eventData.user_id,
+                metadata: JSON.stringify({
+                    offer_type: eventData.offer_type,
+                    product_id: eventData.product_id,
+                    button_type: eventData.button_type,
+                    interaction_type: eventData.interaction_type,
+                    element_type: eventData.element_type,
+                    discount_amount: eventData.discount_amount,
+                    coupon_code: eventData.coupon_code,
+                    duration: eventData.duration,
+                    error_message: eventData.error_message,
+                    error_type: eventData.error_type,
+                    status_code: eventData.status_code,
+                    user_agent: eventData.user_agent,
+                    screen_resolution: eventData.screen_resolution,
+                    viewport_size: eventData.viewport_size,
+                    timestamp: eventData.timestamp
+                })
+            };
+            
             $.ajax({
                 url: this.config.ajaxUrl,
                 type: 'POST',
-                data: {
-                    action: 'woo_offers_track_event',
-                    event_data: JSON.stringify(eventData),
-                    nonce: this.config.nonce
-                },
+                data: ajaxData,
                 success: function(response) {
-                    self.log('Event tracked successfully:', eventData.event_type);
+                    if (response.success) {
+                        self.log('Event tracked successfully:', eventData.event_type);
+                    } else {
+                        self.log('Event tracking failed:', response.data?.message || 'Unknown error');
+                    }
                 },
                 error: function(xhr, status, error) {
-                    self.log('Event tracking failed:', eventData.event_type, error);
+                    self.log('Event tracking AJAX error:', eventData.event_type, error);
                 }
             });
         },
@@ -280,25 +379,49 @@
             // Remove existing messages
             $('.woo-offers-message').remove();
             
-            const messageClass = 'woo-offers-message-' + type;
-            const messageHtml = `
-                <div class="woo-offers-message ${messageClass}" style="
-                    position: fixed; top: 20px; right: 20px; z-index: 9999;
-                    background: ${type === 'success' ? '#4CAF50' : '#f44336'};
-                    color: white; padding: 15px 20px; border-radius: 5px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                    max-width: 300px; word-wrap: break-word;
-                ">
-                    <span class="message-text">${message}</span>
-                    <button class="message-close" style="
-                        background: none; border: none; color: white; 
-                        font-size: 18px; cursor: pointer; float: right;
-                        margin-left: 10px; line-height: 1;
-                    ">&times;</button>
-                </div>
-            `;
+            // ✅ SECURITY: Sanitize message type and escape HTML content
+            const sanitizedType = this.sanitizeInput(type, 'string');
+            const escapedMessage = this.escapeHtml(message);
+            const messageClass = 'woo-offers-message-' + sanitizedType;
             
-            $('body').append(messageHtml);
+            // ✅ SECURITY: Use safer DOM manipulation instead of innerHTML
+            const $messageDiv = $('<div>')
+                .addClass('woo-offers-message')
+                .addClass(messageClass)
+                .css({
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 9999,
+                    background: type === 'success' ? '#4CAF50' : '#f44336',
+                    color: 'white',
+                    padding: '15px 20px',
+                    borderRadius: '5px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                    maxWidth: '300px',
+                    wordWrap: 'break-word'
+                });
+
+            const $messageText = $('<span>')
+                .addClass('message-text')
+                .text(message); // Use .text() to prevent XSS
+
+            const $closeButton = $('<button>')
+                .addClass('message-close')
+                .css({
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    float: 'right',
+                    marginLeft: '10px',
+                    lineHeight: 1
+                })
+                .html('&times;');
+
+            $messageDiv.append($messageText).append($closeButton);
+            $('body').append($messageDiv);
             
             // Auto-hide after 5 seconds
             setTimeout(function() {
@@ -326,6 +449,129 @@
                 args.unshift('[WooOffers Analytics]');
                 console.log.apply(console, args);
             }
+        },
+
+        // ✅ SECURITY ENHANCEMENTS
+
+        /**
+         * Validate offer input data
+         */
+        validateOfferInput: function(offerId, offerType) {
+            // Validate offer ID
+            if (!offerId || isNaN(parseInt(offerId)) || parseInt(offerId) <= 0) {
+                this.log('Security: Invalid offer ID:', offerId);
+                return false;
+            }
+
+            // Validate offer type (whitelist approach)
+            const allowedTypes = [
+                'percentage', 'fixed', 'bogo', 'bundle', 'quantity', 'free_shipping'
+            ];
+            
+            if (!offerType || !allowedTypes.includes(offerType.toLowerCase())) {
+                this.log('Security: Invalid offer type:', offerType);
+                return false;
+            }
+
+            return true;
+        },
+
+        /**
+         * Sanitize input data based on type
+         */
+        sanitizeInput: function(value, type) {
+            switch (type) {
+                case 'int':
+                    return parseInt(value) || 0;
+                
+                case 'float':
+                    return parseFloat(value) || 0.0;
+                
+                case 'string':
+                    return String(value).replace(/[<>\"'&]/g, function(match) {
+                        const escapeMap = {
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#x27;',
+                            '&': '&amp;'
+                        };
+                        return escapeMap[match];
+                    });
+                
+                case 'url':
+                    try {
+                        const url = new URL(value);
+                        return url.href;
+                    } catch (e) {
+                        return '';
+                    }
+                
+                default:
+                    return value;
+            }
+        },
+
+        /**
+         * Enhanced secure AJAX wrapper
+         */
+        secureAjax: function(options) {
+            const self = this;
+            
+            // Add security headers and validation
+            const defaultOptions = {
+                timeout: 30000, // 30 second timeout
+                beforeSend: function(xhr) {
+                    // Add custom security headers if needed
+                    xhr.setRequestHeader('X-WooOffers-Request', 'true');
+                },
+                error: function(xhr, status, error) {
+                    // Enhanced error logging
+                    self.log('Secure AJAX Error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        error: error,
+                        url: options.url
+                    });
+                    
+                    // Call original error handler if provided
+                    if (options.originalError) {
+                        options.originalError(xhr, status, error);
+                    }
+                }
+            };
+
+            // Store original error handler
+            if (options.error) {
+                defaultOptions.originalError = options.error;
+            }
+
+            // Merge options
+            const secureOptions = $.extend({}, defaultOptions, options);
+            
+            return $.ajax(secureOptions);
+        },
+
+        /**
+         * Validate and refresh nonce if needed
+         */
+        validateNonce: function() {
+            // Check if nonce is still valid (simple client-side check)
+            if (!this.config.nonce || this.config.nonce.length < 10) {
+                this.log('Security: Invalid nonce detected');
+                return false;
+            }
+            
+            return true;
+        },
+
+        /**
+         * Escape HTML content to prevent XSS
+         */
+        escapeHtml: function(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
 
